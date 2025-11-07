@@ -1,8 +1,0 @@
-"0",""
-"0","source(here::here(""R"",""_common.R""), local = knitr::knit_global())"
-"0",""
-"0","# Load processed data written by 1_dataprep"
-"0","df_wide <- readRDS(here::here(""data"",""processed"",""df_wide.rds""))"
-"0","df_long <- readRDS(here::here(""data"",""processed"",""df_long.rds""))"
-"0",""
-"0",""
