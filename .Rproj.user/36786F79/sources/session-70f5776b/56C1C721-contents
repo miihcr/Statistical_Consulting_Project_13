@@ -1,5 +1,0 @@
-source(here::here("scripts","load_all.R"))
-
-install.packages("usethis")
-
-library(usethis)

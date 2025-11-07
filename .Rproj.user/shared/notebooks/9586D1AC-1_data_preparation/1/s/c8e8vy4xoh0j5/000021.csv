@@ -1,5 +1,0 @@
-"0",""
-"0",""
-"0","# --- 1. Import data ---"
-"0","df_wide <- read.csv(here(""data"", ""raw"", ""data_2.csv""))"
-"0","head(df_wide)"
