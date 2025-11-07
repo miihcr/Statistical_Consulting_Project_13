@@ -1,0 +1,7 @@
+"0","social_anxiety_rel = psych::alpha(sus_scores[social_anxiety_items], check.keys = FALSE)"
+"0","alpha_value1 = social_anxiety_rel$total$raw_alpha"
+"0","alpha_value1"
+"1","[1]"
+"1"," 0.8728044"
+"1","
+"

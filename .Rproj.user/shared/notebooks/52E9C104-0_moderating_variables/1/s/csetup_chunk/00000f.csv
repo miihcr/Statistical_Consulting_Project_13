@@ -1,0 +1,2 @@
+"0","source(here::here(""R"",""_common.R""), local = knitr::knit_global())"
+"0",""

@@ -1,0 +1,49 @@
+# Hypothesis 1: group × block × susceptibility for climate
+
+df_climate <- df_long |> filter(target == "climate")
+
+m_H1 <- glmmTMB(
+  choice ~ group * block * susceptibility_c + reward * effort + school +
+    (1 + block | ppn),
+  data = df_climate,   # climate trials only
+  family = binomial
+)
+
+summary(m_H1)
+car::Anova(m_H1, type = 3)
+
+# Hypothesis 1: not significant
+
+
+# Hypothesis 2: cohesion × target × manipulation
+
+m_H2 <- glmmTMB(
+  choice ~ target * group * block + reward * effort + school +
+    cohesion_c * target * group +  # key hypothesis
+    (1 + block | ppn),
+  data = df_long,
+  family = binomial
+)
+
+summary(m_H2)
+
+# Estimated marginal means by group, within climate target, across cohesion levels
+emm_climate <- emmeans(
+  m_H2,
+  ~ group | cohesion_c,
+  at = list(
+    target = "climate",
+    cohesion_c = c(-1, 0, 1)  # low / mean / high (1 SD units)
+  ),
+  type = "response"
+)
+
+# Pairwise difference (positive_norm – control) at each cohesion level
+diff_climate <- contrast(
+  emm_climate,
+  method = "pairwise",
+  by = "cohesion_c",
+  adjust = "holm"
+)
+
+summary(diff_climate)

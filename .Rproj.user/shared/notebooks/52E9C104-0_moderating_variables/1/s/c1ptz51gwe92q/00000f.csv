@@ -1,0 +1,8 @@
+"0","data$ppn = as.numeric(data$ppn)"
+"0","data$class = as.numeric(data$class)"
+"0","data$nom_like = as.character(data$nom_like)"
+"0",""
+"0","data_sn = subset(data, select = c(ppn, school, class, nom_like))"
+"0",""
+"0","# Convert comma-separated nominations to list"
+"0","data_sn$nom_like = strsplit((data_sn$nom_like), "","")"

@@ -1,0 +1,7 @@
+"0","all_items_rel = psych::alpha(sus_scores[all_items], check.keys = FALSE)"
+"0","alpha_value3 = all_items_rel$total$raw_alpha"
+"0","alpha_value3"
+"1","[1]"
+"1"," 0.8745036"
+"1","
+"

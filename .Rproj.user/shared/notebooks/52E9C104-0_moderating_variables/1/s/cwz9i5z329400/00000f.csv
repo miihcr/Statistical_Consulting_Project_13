@@ -1,0 +1,2 @@
+"0","# Combine invalid nodes with the original node list"
+"0","nodes_extended = rbind(nodes, invalid_all)"
