@@ -1,0 +1,369 @@
+---
+title: "2_descriptives"
+author: "Milena Costa"
+date: "2025-11-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+source(here::here("R","_common.R"), local = knitr::knit_global())
+
+# Load processed data written by 1_dataprep
+df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
+df_long <- readRDS(here::here("data","processed","df_long.rds"))
+
+
+```
+
+```{r}
+
+# --- Visualizations ---
+
+
+df_summary <- df_long
+
+pd <- position_dodge(width = 0.75)
+
+# --- Plot A: Proportion by Target ---
+
+a_data <- df_long |>
+  group_by(ppn, target) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(target) |>
+  summarise(
+    prop = mean(prop_per_ppn),
+    se = sd(prop_per_ppn) / sqrt(n()),
+    n = n(),
+    .groups = "drop"
+  )
+
+
+plot_a <- ggplot(a_data,
+                 aes(x = reorder(target, -prop),
+                     y = prop,
+                     fill = target)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                width = 0.15, linewidth = 0.8) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)), 
+            vjust = -1, size = 4) +
+  scale_fill_manual(
+    name = "Social target",
+    values = c("self" = "#E15759",      
+               "climate" = "#59A14F",    
+               "prosocial" = "#4E79A7")  
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     limits = c(0, 1),
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    x = "Recipient",
+    y = "Proportion of High-Effort Choices",
+    fill = "Social target"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        panel.grid.major.x = element_blank())
+
+plot_a 
+
+
+# --- Plot B: Proportion by Effort --- 
+b_data <- df_long |>
+  group_by(ppn, effort, target) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(effort, target) |>
+  summarise(
+    prop = mean(prop_per_ppn),
+    se = sd(prop_per_ppn) / sqrt(n()),
+    n = n(),
+    .groups = "drop"
+  )
+
+plot_b <- ggplot(b_data, aes(x = factor(effort), y = prop, fill = target)) +
+  geom_col(position = pd, width = 0.7) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                position = pd, width = 0.2, linewidth = 0.6) +
+  scale_fill_manual(
+    values = c("self" = "#E15759",
+               "climate" = "#59A14F",
+               "prosocial" = "#4E79A7"),
+    name = "Recipient"
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1),
+                     limits = c(0, 1), expand = c(0, 0)) +
+  labs(x = "Effort Level",
+       y = "Proportion of High-Effort Choices") +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "top",
+        legend.title = element_blank())
+plot_b
+
+
+
+# --- Plot C: proportion by reward
+
+c_data <- df_long |>
+  group_by(ppn, reward, target) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(reward, target) |>
+  summarise(
+    prop = mean(prop_per_ppn),
+    se = sd(prop_per_ppn) / sqrt(n()),
+    n = n(),
+    .groups = "drop"
+  )
+
+
+plot_c <- ggplot(c_data, aes(x = factor(reward), y = prop, fill = target)) +
+  geom_col(position = pd, width = 0.7) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                position = pd, width = 0.2, linewidth = 0.6) +
+  scale_fill_manual(
+    values = c("self" = "#E15759",
+               "climate" = "#59A14F",
+               "prosocial" = "#4E79A7"),
+    name = "Recipient"
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1),
+                     limits = c(0, 1), expand = c(0, 0)) +
+  labs(x = "Reward Level",
+       y = "Proportion of High-Effort Choices") +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "top",
+        legend.title = element_blank())
+plot_c
+
+
+
+
+
+
+# --- Interaction Plots ---
+
+# --- Plot D: Reward x Effort interaction ---
+
+d_data <- df_long |>
+  group_by(ppn, reward, effort) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(reward, effort) |>
+  summarise(
+    prop = mean(prop_per_ppn),
+    se = sd(prop_per_ppn) / sqrt(n()),
+    n = n(),
+    .groups = "drop"
+  )
+
+plot_d <- ggplot(d_data, aes(x = reward, y = prop, 
+                                 color = effort, group = effort)) +
+  geom_point(size = 3.5) +
+  geom_line(linewidth = 1.1) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                width = 0.15, linewidth = 0.9) +
+  scale_color_tableau(palette = "Tableau 10", name = "Effort Level") +
+  scale_y_continuous(labels = percent_format(accuracy = 1), breaks = seq(0.5, 1, 0.1)) +
+  coord_cartesian(ylim = c(0.5, 1)) +
+  labs(
+    x = "Reward", 
+    y = "Proportion High-Effort",
+    title = "Reward × Effort Interaction"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right",
+        panel.grid.minor = element_blank())
+
+plot_d
+
+
+
+# ---  Plot E: Target × Block × Group 
+
+
+e_data <- df_long |>
+  group_by(ppn, target, block, group) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(target, block, group) |>
+  summarise(
+    n_participants = n(),
+    prop = mean(prop_per_ppn),
+    se = sd(prop_per_ppn) / sqrt(n()),
+    .groups = "drop"
+  )
+
+
+
+plot_e <- ggplot(e_data,
+                 aes(x = block, y = prop, 
+                     color = group, group = group)) +
+  geom_line(linewidth = 1.3) +
+  geom_point(size = 3.5) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                width = 0.1, linewidth = 0.9) +
+  facet_wrap(~ target, labeller = labeller(
+    target = c("self" = "Self", 
+               "climate" = "Climate", 
+               "prosocial" = "Prosocial")
+  )) +
+  scale_color_manual(
+    name = "Condition",
+    values = c(
+      "negative_norm" = "#E15759",  
+      "positive_norm" = "#59A14F",  
+      "control" = "#4E79A7"         
+    ),
+    labels = c(
+      "positive_norm" = "Positive Norm",
+      "negative_norm" = "Negative Norm",
+      "control" = "Control"
+    )
+  ) +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1),
+    limits = c(0.7, 1), 
+    breaks = seq(0.7, 1, 0.05)
+  ) +
+  labs(
+    x = NULL, 
+    y = "Proportion High-Effort",
+    title = "Target × Block × Manipulation Condition"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom", 
+    strip.text = element_text(face = "bold", size = 12),
+    panel.grid.minor = element_blank()
+  )
+
+plot_e
+
+
+# --- Plot F: Focus on Climate Target Only ---
+
+
+f_data <- e_data |>
+  filter(target == "climate")
+
+
+
+plot_f <- ggplot(f_data,
+                 aes(x = block, y = prop, 
+                     color = group, group = group)) +
+  geom_line(linewidth = 1.5) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                width = 0.1, linewidth = 1) +
+  scale_color_manual(
+    name = "Condition",
+    values = c(
+      "negative_norm" = "#E15759",
+      "positive_norm" = "#59A14F",
+      "control" = "#4E79A7"
+    ),
+    labels = c(
+      "positive_norm" = "Positive Norm",
+      "negative_norm" = "Negative Norm",
+      "control" = "Control"
+    )
+  ) +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1),
+    limits = c(0.7, 1),
+    breaks = seq(0.7, 1, 0.05)
+  ) +
+  labs(
+    x = NULL,
+    y = "Proportion High-Effort",
+    title = "Pre-Post Changes in Climate Target by Condition"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+
+plot_f
+
+
+# --- Descriptive Statistics ---
+
+# --- Participant characteristics ---
+
+# participant_summary <- df_wide |>
+ # summarise(
+  #  N = n(),
+  #  Age_M = mean(age, na.rm = TRUE),
+   # Age_SD = sd(age, na.rm = TRUE),
+  #  Age_range = paste0(min(age, na.rm = TRUE), "-", max(age, na.rm = TRUE)),
+   # Pct_female = sum(gender == "female", na.rm = TRUE) / n() * 100
+#   )
+
+participant_summary <- df_wide |>
+  summarise(
+    N = n(),
+    N_classes = n_distinct(class),
+    N_schools = n_distinct(school)
+  )
+
+participant_summary
+
+# --- Sample by condition  ---
+condition_summary <- df_wide |>
+  group_by(school, group) |>
+  summarise(n = n(), .groups = "drop") |>
+  pivot_wider(names_from = group, values_from = n, values_fill = 0)
+
+
+print(condition_summary)
+
+# --- Choice frequencies ---
+choice_summary <- df_long |>
+  group_by(ppn, target, block, group) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(target, block, group) |>
+  summarise(
+    n_participants = n(),
+    prop_high_effort = mean(prop_per_ppn),
+    se = sd(prop_per_ppn) / sqrt(n()),  # Proper SE
+    .groups = "drop"
+  ) |>
+  arrange(target, group, block)
+
+print(choice_summary, n = 100)
+
+
+# --- By reward and effort ---
+choice_by_params <- df_long |>
+  group_by(reward, effort) |>
+  summarise(
+    n_trials = n(),
+    prop_high_effort = mean(choice, na.rm = TRUE),
+    se = sd(prop_per_ppn) / sqrt(n()),
+    .groups = "drop"
+  )
+
+print(choice_by_params)
+
+# Main effect plot 
+p_main <- ggplot(choice_summary, aes(x = block, y = prop_high_effort, 
+                                     color = group, group = group)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = prop_high_effort - se, 
+                    ymax = prop_high_effort + se), width = 0.1) +
+  facet_wrap(~ target) +
+  scale_color_manual(values = c("positive_norm" = "#59A14F", 
+                                "negative_norm" = "#E15759", 
+                                "control" = "#4E79A7"),
+                     labels = c("Positive Norm", "Negative Norm", "Control")) +
+  labs(x = "Block", y = "Proportion High-Effort Choices",
+       color = "Condition",
+       title = "High-Effort Choice by Target, Block, and Norm Condition") +
+  theme(legend.position = "bottom")
+
+p_main
+
+
+
+
+```
+

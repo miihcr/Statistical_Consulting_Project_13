@@ -1,0 +1,54 @@
+# Fixed version with proper SE and better formatting
+choice_summary_fixed <- df_long |>
+  group_by(ppn, target, block, group) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(target, block, group) |>
+  summarise(
+    n_participants = n(),
+    prop_high_effort = mean(prop_per_ppn),
+    se = sd(prop_per_ppn) / sqrt(n()),  # Proper SE
+    .groups = "drop"
+  ) |>
+  arrange(target, group, block)
+
+p_main_fixed <- ggplot(choice_summary_fixed, 
+                       aes(x = block, y = prop_high_effort, 
+                           color = group, group = group)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = prop_high_effort - se, 
+                    ymax = prop_high_effort + se), 
+                width = 0.1, linewidth = 0.8) +
+  facet_wrap(~ target, labeller = labeller(
+    target = c("self" = "Self", 
+               "climate" = "Climate", 
+               "prosocial" = "Prosocial")
+  )) +
+  scale_color_manual(
+    name = "Condition",
+    values = c("positive_norm" = "#2E7D32",   # darker green
+               "negative_norm" = "#C62828",   # darker red
+               "control" = "#757575"),        # gray
+    labels = c("positive_norm" = "Positive Norm", 
+               "negative_norm" = "Negative Norm", 
+               "control" = "Control")
+  ) +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1),
+    limits = c(0.5, 1),  # Zoom in to see differences
+    breaks = seq(0.5, 1, 0.1)
+  ) +
+  labs(
+    x = NULL,
+    y = "Proportion High-Effort Choices",
+    title = "H3: Target × Block × Manipulation Condition",
+    subtitle = "Main hypothesis: Does social norm manipulation affect climate target differently?"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold", size = 12)
+  )
+
+p_main_fixed
