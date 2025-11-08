@@ -1,0 +1,67 @@
+
+
+# Set contrasts
+
+options(contrasts = c("contr.sum", "contr.sum"))
+
+
+# Control
+ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
+
+## --- Random intercepts: ppn + class vs ppn only ---
+m1 <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 | ppn) + (1 | class),
+  data = df_long, family = binomial, control = ctrl
+)
+
+isSingular(m1)
+VarCorr(m1)
+
+m1_simpler <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 | ppn),
+  data = df_long, family = binomial, control = ctrl
+)
+
+anova(m1_simpler, m1, test = "Chisq")
+
+
+
+plot_model(final_model,
+           type = "diag")
+
+# --- Add slopes (|) ---
+m2 <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 + block | ppn),
+  data = df_long, family = binomial, control = ctrl
+)
+
+isSingular(m2)
+VarCorr(m2)
+
+
+final_model <- m2
+
+summary(final_model)
+
+
+Anova(final_model, type = 3)
+
+# --- Reward × Effort ---
+emm1 <- emmeans(final_model, ~ reward * effort, type = "response")
+summary(contrast(emm1, "pairwise", by = "effort", adjust = "holm"),
+        infer = TRUE, type = "response")
+emmip(final_model, effort ~ reward, CIs = TRUE)
+
+
+# --- Target × Group ---
+emm2 <- emmeans(final_model, ~ target * group, type = "response")
+summary(contrast(emm2, "pairwise", by = "group", adjust = "holm"),
+        infer = TRUE, type = "response")
+
+
+emm_tg <- emmeans(final_model, ~ target * group, type = "response")
+emmip(emm_tg, group ~ target)
+

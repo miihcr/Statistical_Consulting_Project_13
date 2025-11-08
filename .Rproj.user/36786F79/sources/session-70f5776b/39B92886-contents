@@ -1,0 +1,38 @@
+
+# Control
+ctrl <- glmerControl(optimizer = "bobyqa", 
+                     optCtrl = list(maxfun = 1e6))
+
+## --- Random intercepts: ppn + class vs ppn only ---
+m1 <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 | ppn) + (1 | class),
+  data = df_long, family = binomial, control = ctrl
+)
+
+isSingular(m1)
+VarCorr(m1)
+
+m1_simpler <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 | ppn),
+  data = df_long, family = binomial, control = ctrl
+)
+
+anova(m1_simpler, m1, test = "Chisq")
+
+# --- Add slopes (|) ---
+m1 <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 + block | ppn),
+  data = df_long, family = binomial, control = ctrl
+)
+
+isSingular(m2)
+VarCorr(m2)
+anova(m1_simpler, m2, test = "Chisq")
+
+final_model <- m2
+
+Anova(final_model, type = 3)
+summary(final_model)

@@ -1,0 +1,11 @@
+anova(m_baseline, m_susceptibility, m_cohesion, 
+      m_suscept_mod, m_cohesion_mod)
+
+emm_all <- emmeans(final_mod_model, ~ target * group * block, type = "response")
+emmip(final_mod_model, group ~ block | target, CIs = TRUE, type = "response")
+
+emm_susc <- emmeans(final_mod_model,
+                    ~ group | susceptibility_c,
+                    at = list(susceptibility_c = c(-1, 0, 1)))
+summary(emm_susc, type = "response")
+emmip(final_mod_model, group ~ susceptibility_c, type = "response")

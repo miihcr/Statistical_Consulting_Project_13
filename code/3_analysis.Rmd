@@ -15,26 +15,27 @@ df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
 df_long <- readRDS(here::here("data","processed","df_long.rds"))
 
 
-```
-
-# Statistical Analysis
-
-## Modelling Strategy
-
-```{r}
+# Contrasts
+options(contrasts = c("contr.sum", "contr.sum"))
 
 # Control
 ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
 
-## --- Random intercepts: ppn + class vs ppn only ---
+
+```
+
+# Statistical Analysis
+
+## GLMM (lme4) for RQ1
+
+```{r}
+
+# Random intercepts: ppn + class vs ppn-only
 m1 <- glmer(
   choice ~ target*group*block + reward*effort + school +
     (1 | ppn) + (1 | class),
   data = df_long, family = binomial, control = ctrl
 )
-
-isSingular(m1)
-VarCorr(m1)
 
 m1_simpler <- glmer(
   choice ~ target*group*block + reward*effort + school +
@@ -42,80 +43,214 @@ m1_simpler <- glmer(
   data = df_long, family = binomial, control = ctrl
 )
 
-anova(m1_simpler, m1, test = "Chisq")
+#  keep class intercept only if needed
+print(anova(m1_simpler, m1, test = "Chisq"))
+print(isSingular(m1))
+print(VarCorr(m1))
 
-# --- Add slopes (|) ---
+# Add the within-person slope: block
 m2 <- glmer(
   choice ~ target*group*block + reward*effort + school +
     (1 + block | ppn),
   data = df_long, family = binomial, control = ctrl
 )
 
-isSingular(m2)
-VarCorr(m2)
-anova(m1_simpler, m2, test = "Chisq")
+print(isSingular(m2))
+print(VarCorr(m2))
 
+# Choose final model 
 final_model <- m2
 
-Anova(final_model, type = 3)
-summary(final_model)
+# Fixed Effects
 
+print(summary(final_model))
+print(Anova(final_model, type = 3))
 
 ```
 
-## Model Diagnostics
+### Post-hoc for RQ1
 
 ```{r}
 
 
-# Simulate residuals
-res <- simulateResiduals(final_model)
+# --- Reward x effort --- 
+
+emm_re <- emmeans(final_model, ~ reward * effort, type = "response")
+
+print(summary(contrast(emm_re, "pairwise", by = "effort", adjust = "holm"),
+infer = TRUE, type = "response"))
+print(summary(contrast(emm_re, "pairwise", by = "reward", adjust = "holm"),
+infer = TRUE, type = "response"))
+
+emmip(final_model, effort ~ reward, CIs = TRUE, type = "response")
+
+
+# --- Target x group --- 
+
+emm_tg <- emmeans(final_model, ~ target * group, type = "response")
+
+print(summary(contrast(emm_tg, "pairwise", by = "group", adjust = "holm"),
+infer = TRUE, type = "response"))
+print(summary(contrast(emm_tg, "pairwise", by = "target", adjust = "holm"),
+infer = TRUE, type = "response"))
+
+emmip(emm_tg, group ~ target, CIs = TRUE)
+
+
+# Block x Target x Group (Pre-Post deltas)
+
+emm_all <- emmeans(final_model, ~ target * group * block, type = "response")
+print(emm_all)
+
+emm_by_block <- emmeans(final_model, ~ block | target * group, type = "response")
+post_pre <- contrast(emm_by_block, method = "revpairwise")
+print(post_pre)
+
+did_groups <- pairs(post_pre, by = "target", adjust = "holm")
+print(did_groups)
+
+climate_delta <- subset(post_pre, target == "climate")
+print(climate_delta)
+print(pairs(climate_delta, adjust = "holm"))
+
+emmip(final_model, group ~ block | target, CIs = TRUE, type = "response")
+
+
+```
+
+### Diagnostics (final_model)
+
+```{r}
+
+set.seed(123)
+res <- simulateResiduals(final_model, n = 1000)
 plot(res)
 testUniformity(res)
 testDispersion(res)
 testZeroInflation(res)
 testOutliers(res)
 
-# Variance components
-VarCorr(final_model)
+print(VarCorr(final_model))
+print(performance::icc(final_model))
+print(performance::check_collinearity(final_model))
 
-# ICC
-icc_vals <- performance::icc(final_model)
-icc_vals
-
-# VIF / collinearity
-performance::check_collinearity(final_model)
 
 ```
 
+## Moderator Models (glmmTMB) for RQ2
 
-
-
-## Estimated Marginal Means & Contrasts
 
 ```{r}
 
 
-# --- a) Predicted probabilities  
-emm_all <- emmeans(final_model, ~ target * group * block, type = "response")
-emm_all
+# Baseline model (no moderators)
+m_baseline <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
 
-# --- b) Post - Pre within each (target x group)
-emm_by_block <- emmeans(final_model, ~ block | target * group, type = "response")
-post_pre     <- contrast(emm_by_block, method = "revpairwise")  # Post - Pre
-post_pre
+# Add susceptibility (main effect)
+m_susceptibility <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c + 
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
 
-# --- c) Compare Post-Pre deltas across groups, separately by target
-did_groups <- pairs(post_pre, by = "target", adjust = "holm")
-did_groups
+# Add cohesion (main effect)
+m_cohesion <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c + cohesion_c + 
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
 
-# --- d) Climate only change and between group comparisons
-climate_delta <- subset(post_pre, target == "climate")
-climate_delta
-pairs(climate_delta, adjust = "holm")
+# Moderator 1: susceptibility × group
+m_suscept_mod <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c*group + cohesion_c +
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
 
-# --- e) Plot with CIs
-emmip(final_model, group ~ block | target, CIs = TRUE, type = "response")
+# Moderator 2: cohesion × group
+m_cohesion_mod <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c*group + cohesion_c*group +
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
+
+# Compare model fits
+anova(m_baseline, m_susceptibility, m_cohesion, 
+      m_suscept_mod, m_cohesion_mod)
+
+# Choose the best model
+final_mod_model <- m_suscept_mod
+summary(final_mod_model)
+car::Anova(final_mod_model, type = 3)
+
+
+
+```
+
+### Analysis of Moderators 
+
+```{r}
+
+# Slopes of susceptibility per group
+
+slopes <- emtrends(final_mod_model, ~ group, var = "susceptibility_c")
+print(summary(slopes))
+print(pairs(slopes, adjust = "holm"))
+
+# Group differences at low/mean/high susceptibility
+
+emm_susc_giv_s <- emmeans(
+final_mod_model, ~ group | susceptibility_c,
+at = list(susceptibility_c = c(-1, 0, 1)), type = "response"
+)
+print(summary(emm_susc_giv_s))
+print(pairs(emm_susc_giv_s, by = "susceptibility_c", adjust = "holm"))
+
+# Predicted probabilities across susceptibility per group
+
+emm_susc <- emmeans(
+final_mod_model, ~ susceptibility_c | group,
+at = list(susceptibility_c = seq(-2, 2, by = 0.5)), type = "response"
+)
+emmip(final_mod_model, group ~ susceptibility_c,
+at = list(susceptibility_c = seq(-2, 2, by = 0.5)),
+type = "response") +
+labs(title = "Group × Susceptibility", x = "Susceptibility (centered)", y = "Predicted probability") +
+theme_minimal()
+
+
+```
+
+### Model Diagnostics RQ2
+
+```{r}
+
+
+# Simulate residuals
+res2 <- simulateResiduals(final_mod_model, n = 1000)
+plot(res2)
+testUniformity(res2)
+testDispersion(res2)
+testZeroInflation(res2)
+testOutliers(res2)
+
+# Variance components
+VarCorr(final_mod_model)
+
+# ICC
+icc_vals <- performance::icc(final_mod_model)
+icc_vals
+
+# VIF / collinearity
+performance::check_collinearity(final_mod_model)
 
 ```
 
@@ -174,105 +309,81 @@ summary(final_mod_model)
 car::Anova(final_mod_model, type = 3)
 
 
+# Climate only 
+
+
+df_climate <- filter(df_long, target == "climate")
+
+# Group x block x SUS
+
+m_H1 <- glmmTMB(
+choice ~ group * block * susceptibility_c + reward * effort + school +
+(1 + block | ppn),
+data = df_climate, family = binomial, control = ctrl_tmb
+)
+print(Anova(m_H1, type = 3))
+
+
+
+summary(m_H1)
+
+# Cohesion x target x group
+
+m_H2 <- glmmTMB(
+choice ~ target * group * block + reward * effort + school +
+cohesion_c * target * group +
+(1 + block | ppn),
+data = df_long, family = binomial, control = ctrl_tmb
+)
+print(Anova(m_H2, type = 3))
+
+
+# Climate trials: group differences at cohesion = -1, 0, 1
+
+emm_coh_climate <- emmeans(
+m_H2, ~ group | cohesion_c,
+at = list(target = "climate", cohesion_c = c(-1, 0, 1)),
+type = "response"
+)
+print(summary(emm_coh_climate))
+print(pairs(emm_coh_climate, by = "cohesion_c", adjust = "holm"))
+
+emmip(m_H2, group ~ cohesion_c | target,
+at = list(cohesion_c = seq(-2, 2, by = 0.5)),
+type = "response") +
+labs(title = "Cohesion × Group × Target",
+x = "Cohesion (centered)", y = "Predicted probability") +
+theme_minimal()
+
+
+
+
+
+
+
 ```
 
-# Analysis of Moderators
+
+# Model Diagnostics
 
 ```{r}
 
 
-# --- Slopes of susceptibility per group ---
-
-slopes <- emtrends(final_mod_model, ~ group, var = "susceptibility_c")
-summary(slopes)
-pairs(slopes, adjust = "holm")  # test if slopes differ
+plot_model(final_mod_model,
+           type = "diag")
 
 
 
-# --- Predicted probabilities at low/mean/high susceptibility
+set.seed(123)
+res <- simulateResiduals(final_mod_model)
+plot(res)
+testUniformity(res)
+testDispersion(res)
+testZeroInflation(res)
+testOutliers(res)
 
-emm_suscept <- emmeans(final_mod_model, 
-                       ~ group | susceptibility_c,
-                       at = list(susceptibility_c = c(-1, 0, 1)),
-                       type = "response")
-
-summary(emm_suscept)
-pairs(emm_suscept, by = "susceptibility_c", adjust = "holm")
-
-# Visualization
-emmip(final_mod_model, group ~ susceptibility_c,
-      at = list(susceptibility_c = seq(-2, 2, by = 0.5)),
-      type = "response") +
-  labs(
-    title = "Group × Susceptibility Interaction",
-    x = "Social Susceptibility (centered)",
-    y = "Predicted Probability"
-  ) +
-  theme_minimal()
-
-
-
-# Hypothesis 1: Social Susceptibility in Climate Trials
-
-df_climate <- df_long |> filter(target == "climate")
-
-m_H1 <- glmmTMB(
-  choice ~ group * block * susceptibility_c + reward * effort + school +
-    (1 + block | ppn),
-  data = df_climate,
-  family = binomial
-)
-
-summary(m_H1)
-car::Anova(m_H1, type = 3)
-
-# 3-way interaction non-significant 
-
-# Hypothesis 2: Social Cohesion
-
-m_H2 <- glmmTMB(
-  choice ~ target * group * block + reward * effort + school +
-    cohesion_c * target * group +
-    (1 + block | ppn),
-  data = df_long,
-  family = binomial
-)
-
-summary(m_H2)
-car::Anova(m_H2, type = 3)
-
-
-
-# Climate trials
-
-emm_climate <- emmeans(
-  m_H2,
-  ~ group | cohesion_c,
-  at = list(
-    target = "climate",
-    cohesion_c = c(-1, 0, 1)
-  ),
-  type = "response"
-)
-
-diff_climate <- contrast(
-  emm_climate,
-  method = "pairwise",
-  by = "cohesion_c",
-  adjust = "holm"
-)
-summary(diff_climate)
-
-
-emmip(m_H2, group ~ cohesion_c | target,
-      at = list(cohesion_c = c(-1,0,1)),
-      type = "response") +
-  labs(
-    title = "H2: Cohesion × Group × Target",
-    x = "Social Cohesion (centered)",
-    y = "Predicted Probability of Climate Choice"
-  ) +
-  theme_minimal()
+print(performance::icc(final_mod_model))
+print(performance::check_collinearity(final_mod_model))
 
 
 

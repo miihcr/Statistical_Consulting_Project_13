@@ -1,0 +1,28 @@
+"0","set.seed(123)
+res <- simulateResiduals(final_model, n = 1000)
+plot(res)
+testUniformity(res)
+"
+"1","
+"
+"1","	Asymptotic one-sample Kolmogorov-Smirnov test"
+"1","
+"
+"1","
+"
+"1","data:  "
+"1",""
+"1","simulationOutput$scaledResiduals"
+"1",""
+"1","
+"
+"1","D = 0.011047, p-value = 0.4701"
+"1","
+"
+"1","alternative hypothesis: "
+"1","two-sided"
+"1",""
+"1","
+"
+"1","
+"

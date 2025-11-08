@@ -1,77 +1,145 @@
-# ====================================================================
-# HYPOTHESIS TESTING: SOCIAL SUSCEPTIBILITY & COHESION
-# ====================================================================
 
-library(emmeans)
-library(ggeffects)
-library(ggplot2)
-library(dplyr)
-
-
-
-# --------------------------------------------------------------------
-# HYPOTHESIS 1: Social Susceptibility
-# Higher susceptibility → greater Δ(post-pre) in CLIMATE condition
-# --------------------------------------------------------------------
-
-# Test: susceptibility × group × target 
-# Your model already has susceptibility_c * group
-# Need to check if this interacts with target
-
-# First, check if we need target in the interaction
-m_suscept_target <- glmmTMB(
-  choice ~ target*group*block + reward*effort + school + 
-    susceptibility_c*group*target + cohesion_c +
+# Baseline model (no moderators)
+m_baseline <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
     (1 + block | ppn),
   data = df_long, family = binomial
 )
 
-# Compare models
-anova(m_suscept_mod, m_suscept_target)
+# Add susceptibility (main effect only)
+m_susceptibility <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c + 
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
 
-# Since m_suscept_target is not sig, keep  m_suscept_mod
+# Add cohesion (main effect only)
+m_cohesion <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c + cohesion_c + 
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
 
-# Hypothesis 1: group × block × susceptibility for climate
+# Moderator 1: susceptibility × group
+m_suscept_mod <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c*group + cohesion_c +
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
 
-df_climate <- df_long |>  filter(target == "climate")
+# Moderator 2: cohesion × group
+m_cohesion_mod <- glmmTMB(
+  choice ~ target*group*block + reward*effort + school +
+    susceptibility_c*group + cohesion_c*group +
+    (1 + block | ppn),
+  data = df_long, family = binomial
+)
+
+# Compare model fits
+anova(m_baseline, m_susceptibility, m_cohesion, 
+      m_suscept_mod, m_cohesion_mod)
+
+# Keep the better-fitting moderator model
+final_mod_model <- m_suscept_mod
+summary(final_mod_model)
+car::Anova(final_mod_model, type = 3)
+
+
+
+
+# --- Slopes of susceptibility per group ---
+
+slopes <- emtrends(final_mod_model, ~ group, var = "susceptibility_c")
+summary(slopes)
+pairs(slopes, adjust = "holm")  # test if slopes differ
+
+
+
+# --- Predicted probabilities at low/mean/high susceptibility
+
+emm_suscept <- emmeans(final_mod_model, 
+                       ~ group | susceptibility_c,
+                       at = list(susceptibility_c = c(-1, 0, 1)),
+                       type = "response")
+
+summary(emm_suscept)
+pairs(emm_suscept, by = "susceptibility_c", adjust = "holm")
+
+# Visualization
+emmip(final_mod_model, group ~ susceptibility_c,
+      at = list(susceptibility_c = seq(-2, 2, by = 0.5)),
+      type = "response") +
+  labs(
+    title = "Group × Susceptibility Interaction",
+    x = "Social Susceptibility (centered)",
+    y = "Predicted Probability"
+  ) +
+  theme_minimal()
+
+
+
+# Hypothesis 1: Social Susceptibility in Climate Trials
+
+df_climate <- df_long |> filter(target == "climate")
 
 m_H1 <- glmmTMB(
   choice ~ group * block * susceptibility_c + reward * effort + school +
     (1 + block | ppn),
-  data = df_climate,   # climate trials only
+  data = df_climate,
   family = binomial
 )
 
-summary(m_H1 )
-car::Anova(m_H1 , type = 3)
+summary(m_H1)
+car::Anova(m_H1, type = 3)
 
-# Hypothesis 1: not significant
+# 3-way interaction non-significant 
 
-
-# Hypothesis 2: cohesion x target x manipulation
+# Hypothesis 2: Social Cohesion
 
 m_H2 <- glmmTMB(
   choice ~ target * group * block + reward * effort + school +
-    cohesion_c * target * group +  # key hypothesis
+    cohesion_c * target * group +
     (1 + block | ppn),
   data = df_long,
   family = binomial
 )
 
 summary(m_H2)
+car::Anova(m_H2, type = 3)
 
-# Estimated marginal means by group, within climate target, across cohesion levels
+
+
+# Climate trials
+
 emm_climate <- emmeans(
   m_H2,
   ~ group | cohesion_c,
   at = list(
     target = "climate",
-    cohesion_c = c(-1, 0, 1)  # low / mean / high (1 SD units)
+    cohesion_c = c(-1, 0, 1)
   ),
   type = "response"
 )
 
-# Pairwise difference (positive_norm – control) at each cohesion level
-diff_climate <- contrast(emm_climate, method = "pairwise", by = "cohesion_c", adjust = "holm")
+diff_climate <- contrast(
+  emm_climate,
+  method = "pairwise",
+  by = "cohesion_c",
+  adjust = "holm"
+)
 summary(diff_climate)
+
+
+emmip(m_H2, group ~ cohesion_c | target,
+      at = list(cohesion_c = c(-1,0,1)),
+      type = "response") +
+  labs(
+    title = "H2: Cohesion × Group × Target",
+    x = "Social Cohesion (centered)",
+    y = "Predicted Probability of Climate Choice"
+  ) +
+  theme_minimal()
 

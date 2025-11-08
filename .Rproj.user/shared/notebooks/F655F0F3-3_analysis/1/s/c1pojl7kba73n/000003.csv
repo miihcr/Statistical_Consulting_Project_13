@@ -1,0 +1,30 @@
+"0","# Simulate residuals
+res2 <- simulateResiduals(final_mod_model, n = 1000)
+# Simulate residuals
+res2 <- simulateResiduals(final_mod_model, n = 1000)
+plot(res2)
+testUniformity(res2)
+"
+"1","
+"
+"1","	Asymptotic one-sample Kolmogorov-Smirnov test"
+"1","
+"
+"1","
+"
+"1","data:  "
+"1",""
+"1","simulationOutput$scaledResiduals"
+"1",""
+"1","
+"
+"1","D = 0.010843, p-value = 0.4944"
+"1","
+"
+"1","alternative hypothesis: "
+"1","two-sided"
+"1",""
+"1","
+"
+"1","
+"

@@ -1,0 +1,109 @@
+# a) Random intercepts: ppn + class vs ppn-only
+m1 <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 | ppn) + (1 | class),
+  data = df_long, family = binomial, control = ctrl
+)
+
+m1_simpler <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 | ppn),
+  data = df_long, family = binomial, control = ctrl
+)
+
+# LRT: keep class intercept only if helpful
+print(anova(m1_simpler, m1, test = "Chisq"))
+print(isSingular(m1))
+print(VarCorr(m1))
+
+# b) Add the within-person slope: block
+m2 <- glmer(
+  choice ~ target*group*block + reward*effort + school +
+    (1 + block | ppn),
+  data = df_long, family = binomial, control = ctrl
+)
+
+print(isSingular(m2))
+print(VarCorr(m2))
+
+# Choose final model 
+final_model <- m2
+
+# Fixed effects tests and summary
+
+print(summary(final_model))
+print(Anova(final_model, type = 3))
+
+# Diagnostics
+
+# Post-hoc
+
+# Reward x effort 
+
+
+emm_re <- emmeans(final_model, ~ reward * effort, type = "response")
+
+# Reward differences within each effort level (Holm-adjusted; 
+# odds ratios with CIs)
+print(
+  summary(
+    contrast(emm_re, "pairwise", by = "effort", adjust = "holm"),
+    infer = TRUE, type = "response"
+  )
+)
+
+# ) Effort differences within each reward level
+print(
+  summary(
+    contrast(emm_re, "pairwise", by = "reward", adjust = "holm"),
+    infer = TRUE, type = "response"
+  )
+)
+
+# Plot predicted probabilities
+emmip(final_model, effort ~ reward, CIs = TRUE, type = "response")
+
+
+# Target x group
+
+emm_tg <- emmeans(final_model, ~ target * group, type = "response")
+
+# Target differences within each group
+print(
+  summary(
+    contrast(emm_tg, "pairwise", by = "group", adjust = "holm"),
+    infer = TRUE, type = "response"
+  )
+)
+
+# Group differences within each target
+print(summary(contrast(emm_tg, "pairwise", by = "target", adjust = "holm"),
+      infer = TRUE, type = "response"))
+
+
+# visualization
+emmip(emm_tg, group ~ target, CIs = TRUE, type = "response")
+
+
+# Block x Target x Group
+
+# a) Predicted probabilities for all combos
+emm_all <- emmeans(final_model, ~ target * group * block, type = "response")
+print(emm_all)
+
+# b) Post - Pre within each (target × group)
+emm_by_block <- emmeans(final_model, ~ block | target * group, type = "response")
+post_pre <- contrast(emm_by_block, method = "revpairwise")  # Post - Pre
+print(post_pre)
+
+# c) Compare the Post–Pre deltas across groups, separately by target
+did_groups <- pairs(post_pre, by = "target", adjust = "holm")
+print(did_groups)
+
+# d) Climate-only change and between-group comparisons
+climate_delta <- subset(post_pre, target == "climate")
+print(climate_delta)
+print(pairs(climate_delta, adjust = "holm"))
+
+# e) Pre vs Post plot by target × group
+emmip(final_model, group ~ block | target, CIs = TRUE, type = "response")
