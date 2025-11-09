@@ -105,6 +105,8 @@ glimpse(df_long)
 
 # Balanced design?
 table(df_long$group, df_long$block)
+
+table(df_long$group)
 table(df_long$target, df_long$block)
 
 # Missing data
@@ -113,6 +115,7 @@ colSums(is.na(df_long))
 # Check outcome coding (should be mostly 1s, some 0s)
 prop.table(table(df_long$choice))
 
+table(df_wide$group)
 
 # --- 8. Save data frames ---
 
