@@ -1,0 +1,66 @@
+library(texreg)
+
+library(dplyr)
+
+# Target x group x block
+
+data_summary <- df_long |> 
+  group_by(target, group, block) |> 
+  summarise(
+    N = n(),
+    M = mean(choice, na.rm = TRUE),   # proportion of high-effort choices
+    SD = sd(choice, na.rm = TRUE),
+    SE = SD / sqrt(N),
+    .groups = "drop"
+  )
+
+data_summary
+
+library(ggplot2)
+
+ggplot(data_summary, aes(x = target, y = M, fill = group)) +
+  geom_col(position = position_dodge(width = 0.9)) +
+  geom_errorbar(aes(ymin = M - SE, ymax = M + SE),
+                width = 0.2, position = position_dodge(width = 0.9)) +
+  facet_wrap(~ block) +   # separate panels for pre vs post
+  scale_y_continuous(labels = scales::percent_format(1), limits = c(0, 1)) +
+  labs(
+    x = "Target",
+    y = "Proportion of high-effort choices",
+    fill = "Group"
+  ) +
+  theme_bw() +
+  theme(legend.position = "top")
+
+
+
+ggplot(data_summary, aes(x = block, y = M, color = group, group = group)) +
+  geom_errorbar(aes(ymin = M - SE, ymax = M + SE),
+                width = 0.1, position = position_dodge(width = 0.1)) +
+  geom_point(position = position_dodge(width = 0.1)) +
+  geom_line(position = position_dodge(width = 0.1)) +
+  facet_wrap(~ target) +
+  scale_y_continuous(labels = scales::percent_format(1), limits = c(0, 1)) +
+  labs(
+    x = "Block (Pre vs Post)",
+    y = "Proportion of high-effort choices",
+    color = "Group"
+  ) +
+  theme_bw() +
+  theme(legend.position = "top")
+
+
+
+
+# Model parameter tables
+
+
+## logit scale
+texreg::texreg(
+  l = list(final_model),
+  custom.model.names = c("Final Model"),
+  single.row = TRUE,
+  caption = "MLM Parameter Estimates: Inclusion of Interaction (SE and p-values)",
+  label = "tab:mlm_interaction",
+  booktabs = TRUE
+  )

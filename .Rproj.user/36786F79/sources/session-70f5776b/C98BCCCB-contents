@@ -1,0 +1,8 @@
+
+
+plot_model(final_model,
+           type = "diag")
+
+
+plot_model(final_model,
+           type = "resid")
