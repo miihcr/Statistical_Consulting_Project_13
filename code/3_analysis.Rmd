@@ -15,8 +15,8 @@ df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
 df_long <- readRDS(here::here("data","processed","df_long.rds"))
 
 
-# Contrasts
-options(contrasts = c("contr.sum", "contr.poly"))
+# set options
+options(contrasts=c("contr.treatment", "contr.poly"))
 
 # Control
 ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))

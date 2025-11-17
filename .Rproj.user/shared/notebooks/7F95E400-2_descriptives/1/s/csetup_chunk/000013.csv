@@ -1,5 +1,0 @@
-"0","source(here::here(""R"",""_common.R""), local = knitr::knit_global())
-"
-"2","Error in eval(ei, envir) : 
-  Package 'lavaan' is not installed. Please install it with: install.packages('lavaan')
-"
