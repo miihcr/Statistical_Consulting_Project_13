@@ -1,0 +1,101 @@
+---
+title: "Missingness"
+author: "Milena Costa"
+date: "2025-11-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+df_wide <- read.csv(here::here("data","raw","data_2.csv"))
+
+library(mice)
+library(VIM)
+library(naniar)
+library(tidyverse)
+library(gtsummary)
+
+
+
+```
+
+# Missing Data Analysis
+
+## 1. Exploring missing data
+
+```{r}
+
+
+prop_miss(df_wide)
+
+
+print(miss_var_summary(df_wide), n=50) # Missingness per variable
+
+df_wide |> miss_case_summary() # Missingness per case
+ 
+aggr(df_, numbers = TRUE, prop = FALSE) 
+
+
+```
+
+
+## 2. Create missingness indicator
+
+```{r}
+
+df_glm <- df_wide |> 
+  mutate(
+    miss_SUS = if_else(is.na(SUS_1), 1, 0),
+    miss_X2 = if_else(
+      rowSums(across(starts_with("X2_"), ~ is.na(.x))) > 0, 
+      1, 0
+    )
+  )
+
+
+```
+
+Does missingness depend on observed variables?
+
+```{r}
+
+# ---- t-tests for continuous variables ----
+t.test(X1_SELF_2easy40 ~ miss_SUS, data = df_glm)
+t.test(X1_CLIMATE_6easy40 ~ miss_X2, data = df_glm)
+
+# ---- chi square tests for categorical variables ----
+chisq.test(table(df_glm$miss_SUS, df_glm$group))
+chisq.test(table(df_glm$miss_X2, df_glm$school))
+chisq.test(table(df_glm$miss_SUS, df_glm$class))
+
+
+
+# Logistic regression
+
+# ---- SUS missingness ----
+model_sus_group  <- glm(miss_SUS ~ group + school, family = binomial, data = df_glm)
+
+model_sus_school <- glm(miss_SUS ~ school, family = binomial, data = df_glm)
+
+model_sus_x1     <- glm(miss_SUS ~ X1_SELF_2easy40 + X1_CLIMATE_2easy40, family = binomial, data = df_glm)
+
+
+summary(model_sus_group)
+summary(model_sus_school)
+summary(model_sus_x1)
+
+# ---- X2 missingness ----
+model <- glm(miss_X2 ~ group, family = binomial, data = df_glm)
+model_x2_school <- glm(miss_X2 ~ school, family = binomial, data = df_glm)
+model_x2_x1     <- glm(miss_X2 ~ 
+                         X1_CLIMATE_2easy40, family = binomial, data = df_glm)
+
+summary(model)
+summary(model_x2_school)
+summary(model_x2_x1)
+
+
+```
+
+Some tests are significant, which indicate Missing at Random (MAR). Thsi means missingness is related to other variables in the dataset, but not to the missing value itself.

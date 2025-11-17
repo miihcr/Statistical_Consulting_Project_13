@@ -1,4 +1,0 @@
-"0",""
-"0","set.seed(123)"
-"0","res <- simulateResiduals(final_model, n = 1000)"
-"0","plot(res)"
