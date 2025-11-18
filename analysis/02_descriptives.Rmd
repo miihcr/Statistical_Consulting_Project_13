@@ -1,0 +1,313 @@
+---
+title: "2_descriptives"
+author: "Milena Costa"
+date: "2025-11-04"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+
+source(here::here("R","_common.R"), local = knitr::knit_global())
+
+df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
+df_long <- readRDS(here::here("data","processed","df_long.rds"))
+
+
+```
+
+# 1) Helper functions
+
+```{r}
+# Standard error
+
+se <- function(x) sd(x, na.rm = TRUE) / sqrt(sum(!is.na(x)))
+
+# Color palettes consistent across plots
+
+pal_target <- c(
+"self"      = "#E15759",
+"climate"   = "#59A14F",
+"prosocial" = "#4E79A7"
+)
+
+pal_group <- c(
+"control"       = "#4E79A7",
+"positive_norm" = "#59A14F",
+"negative_norm" = "#E15759"
+)
+
+pd <- position_dodge(width = 0.7)
+
+
+```
+
+# 2) Participant-Level Summaries
+
+```{r}
+
+participant_summary <- df_wide |>
+summarise(
+N = n(),
+N_classes = n_distinct(class),
+N_schools = n_distinct(school)
+)
+
+participant_summary
+
+```
+
+# 3) Moderators
+## Susceptibility
+
+```{r}
+
+susceptibility_descriptives <- df_long |>
+summarise(
+M   = mean(susceptibility, na.rm = TRUE),
+SD  = sd(susceptibility, na.rm = TRUE),
+Min = min(susceptibility, na.rm = TRUE),
+Max = max(susceptibility, na.rm = TRUE)
+)
+
+susceptibility_descriptives
+
+```
+
+## Classroom Cohesion
+
+
+
+# 4) Manipulation Condition Counts
+
+
+```{r}
+condition_summary <- df_wide |>
+group_by(school, group) |>
+summarise(n = n(), .groups = "drop") |>
+tidyr::pivot_wider(names_from = group, values_from = n, values_fill = 0)
+
+condition_summary
+
+```
+
+
+# 5) Choice Summaries
+
+a) Per-participant (ppn) proportions
+
+```{r}
+
+summary_ppn <- df_long |>
+group_by(ppn, target, block, group) |>
+summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop")
+
+summary_ppn
+
+```
+
+b) Group-level summary (Target $\times$ Block $\times$ Group)
+
+```{r}
+
+choice_summary <- summary_ppn |>
+  group_by(target, block, group) |>
+  summarise(
+    n  = n(),
+    M  = mean(prop_per_ppn, na.rm = TRUE),
+    SE = se(prop_per_ppn),
+    .groups = "drop"
+  )
+
+choice_summary
+
+```
+
+c) Reward $\times$ Effort summary (across participants)
+
+```{r}
+
+choice_by_params <- df_long |>
+  group_by(ppn, reward, effort) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(reward, effort) |>
+  summarise(
+    n  = n(),
+    M  = mean(prop_per_ppn),
+    SE = se(prop_per_ppn),
+    .groups = "drop"
+  )
+
+choice_by_params
+```
+
+# 6) Bar Plots
+
+a) Proportion by Target
+
+```{r}
+
+a_data <- df_long |>
+  group_by(ppn, target) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(target) |>
+  summarise(
+    prop = mean(prop_per_ppn),
+    se = se(prop_per_ppn),
+    n = n(),
+    .groups = "drop"
+  )
+
+
+plot_a <- ggplot(a_data,
+                 aes(x = reorder(target, -prop),
+                     y = prop,
+                     fill = target)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                width = 0.15, linewidth = 0.8) +
+  geom_text(aes(label = scales::percent(prop, accuracy = 1)), 
+            vjust = -1, size = 4) +
+  scale_fill_manual(values = pal_target) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     limits = c(0, 1),
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    x = "Recipient",
+    y = "Proportion of High-Effort Choices",
+    fill = "Social target"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none",
+        panel.grid.major.x = element_blank())
+
+plot_a 
+
+
+
+```
+
+
+b) Proportion by Effort $\times$ Target
+
+```{r}
+
+b_data <- df_long |>
+  group_by(ppn, effort, target) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(effort, target) |>
+  summarise(
+    prop = mean(prop_per_ppn),
+    se   = se(prop_per_ppn),
+    n    = n(),
+    .groups = "drop"
+  )
+
+pd2 <- position_dodge(width = 0.75)
+
+plot_b <- ggplot(b_data, aes(x = effort, y = prop, fill = target)) +
+  geom_col(position = pd2, width = 0.7) +
+  
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                position = pd2, width = 0.2, linewidth = 0.6) +
+  scale_fill_manual(values = pal_target) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0, 1),
+    expand = c(0, 0)
+  ) +
+  labs(x = "Effort Level",
+       y = "Proportion of High-Effort Choices") +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "top",
+        legend.title = element_blank())
+
+plot_b
+
+
+```
+
+c) Proportion by Reward $\times$ Target
+
+```{r}
+c_data <- df_long |>
+  group_by(ppn, reward, target) |>
+  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+  group_by(reward, target) |>
+  summarise(
+    prop = mean(prop_per_ppn),
+    se = se(prop_per_ppn),
+    n = n(),
+    .groups = "drop"
+  )
+
+
+plot_c <- ggplot(c_data, aes(x = reward, y = prop, fill = target)) +
+  geom_col(position = pd, width = 0.7) +
+  geom_errorbar(aes(ymin = prop - se, ymax = prop + se),
+                position = pd, width = 0.2, linewidth = 0.6) +
+ scale_fill_manual(values = pal_target) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     limits = c(0, 1), expand = c(0, 0)) +
+  labs(x = "Reward",
+       y = "Proportion of High-Effort Choices") +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "top",
+        legend.title = element_blank())
+plot_c
+
+
+
+
+
+```
+# 7) Line plots
+
+a) Reward $\times$ Effort interaction
+
+```{r}
+d_data <- df_long |>
+group_by(ppn, reward, effort) |>
+summarise(prop_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
+group_by(reward, effort) |>
+summarise(M = mean(prop_ppn), SE = se(prop_ppn), .groups = "drop")
+
+plot_d <- ggplot(d_data, aes(x = reward, y = M, color = effort, group = effort)) +
+geom_point(size = 3) +
+geom_line(linewidth = 1.1) +
+geom_errorbar(aes(ymin = M - SE, ymax = M + SE), width = 0.15) +
+scale_color_tableau(name = "Effort") +
+scale_y_continuous(labels = scales::percent_format()) +
+labs(x = "Reward", y = "High-Effort") +
+theme_minimal()
+
+plot_d
+
+```
+
+b) Target $\times$ Block $\times$ Group
+
+```{r}
+e_data <- summary_ppn |>
+  group_by(target, block, group) |>
+  summarise(M = mean(prop_per_ppn), SE = se(prop_per_ppn), .groups = "drop")
+
+plot_e <- ggplot(e_data, aes(x = block, y = M,
+                             color = group, group = group)) +
+  geom_line(linewidth = 1.3) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = M - SE, ymax = M + SE), width = 0.1) +
+  facet_wrap(~ target) +
+  scale_color_manual(values = pal_group) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0.7, 1)) +
+  labs(y = "High-Effort Choices") +
+  theme_minimal()
+
+plot_e
+
+```
+
+
+
+
+
