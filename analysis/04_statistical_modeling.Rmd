@@ -7,7 +7,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 
-source(here::here("R","_common.R"), local = knitr::knit_global())
+source(here::here("scripts","_common.R"), local = knitr::knit_global())
 
 df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
 df_long <- readRDS(here::here("data","processed","df_long.rds"))
@@ -31,12 +31,14 @@ ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
 
 ## Research Question 1 
 
+Do exposure to social norms about environmental behavior influence children’s effortful pro-environmental choices?
+
 ```{r}
 
 # Baseline model (intercept only)
 
 m0 <- glmer(
-  choice ~ (1 | ppn) + (1 | class),
+  choice ~ 1 + (1 + block | ppn),  
   data = df_long, family = binomial, control = ctrl
 )
 
@@ -85,10 +87,17 @@ m_no_3way <- glmer(
   data = df_long, family = binomial, control = ctrl
 )
 
-anova(m_no_3way, m_full, test = "Chisq") # model without 3way is better
+anova(m_no_3way, m_full, test = "Chisq") # model without 3way is better but we retain full model given RQ1
+
 
 # Choose final model 
 final_model <- m_full
+
+summary(final_model)
+# Compare with a baseline model
+anova(m0, final_model, test = "Chisq")
+
+
 
 
 ```
@@ -111,10 +120,13 @@ se <- sqrt(diag(vcov(final_model)))
 log_odds <- fixef(final_model)
 tab <- data.frame(
   OR = exp(log_odds),
+  se = se,
   LL = exp(log_odds - 1.96 * se),
   UL = exp(log_odds + 1.96 * se)
 )
-print(round(tab, 3))
+print(round(tab, 2))
+
+round(data.frame(se),2)
 
 
  
@@ -265,7 +277,9 @@ print(performance::check_collinearity(final_model))
 
 ## Research Question 2: Moderation Analysis
 
-We decide to use separate models for climate trials
+Are these effects moderated by (a) individual social susceptibility and (b) classroom cohesion?
+
+Note: We use separate models for climate trials
 
 ```{r}
 

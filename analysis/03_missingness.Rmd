@@ -7,7 +7,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 
-source(here::here("R","_common.R"), local = knitr::knit_global())
+source(here::here("scripts","_common.R"), local = knitr::knit_global())
 knitr::opts_chunk$set(echo = TRUE)  # override so this file shows code
 
 df_wide <- read.csv(here::here("data","raw","data_2.csv"))
