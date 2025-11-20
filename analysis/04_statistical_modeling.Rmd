@@ -304,53 +304,113 @@ r2_nakagawa(final_model)
 
 Are these effects moderated by (a) individual social susceptibility and (b) classroom cohesion?
 
-Note: We use separate models for climate trials
+### Social Susceptibility Moderation
 
 ```{r}
 
-# Filter for climate trials only
+# 1. Test whether susceptibility moderates the Group×Block×Target interaction
 
-
-df_climate <- df_long |>  filter(target == "climate")
-
-
-# Susceptibility Moderation
-m_suscept_base <- glmer(
-  choice ~ group * block + susceptibility_c + reward * effort + school +
+m_suscept_full <- glmmTMB(
+  choice ~ group * block * target * susceptibility_c + 
+           reward * effort + school +
     (1 + block | ppn),
-  data = df_climate, family = binomial,
-  control = ctrl
+  data = df_long, 
+  family = binomial
 )
 
-m_suscept_mod <- glmer(
-  choice ~ group * block * susceptibility_c + reward * effort + school +
+summary(m_suscept_full)
+
+# 2, Compare models 
+
+# Model without four-way interaction (all three-ways included)
+m_suscept_3way <- glmmTMB(
+  choice ~ (group * block * target) + (group * block * susceptibility_c) +
+           (group * target * susceptibility_c) + (block * target * susceptibility_c) +
+           reward * effort + school +
     (1 + block | ppn),
-  data = df_climate, family = binomial,
-  control = ctrl
+  data = df_long, 
+  family = binomial
 )
 
-anova(m_suscept_base, m_suscept_mod)
-summary(m_suscept_mod)
-
-#  Cohesion Moderation 
-m_cohesion_base <- glmer(
-  choice ~ group * block + cohesion_c + reward * effort + school +
+# Model with only susceptibility × group × block 
+m_suscept_simpler <- glmmTMB(
+  choice ~ group * block * susceptibility_c + target + 
+           target:group + target:block +  # Allow target effects but not moderated by susceptibility
+           reward * effort + school +
     (1 + block | ppn),
-  data = df_climate, family = binomial,
-  control = ctrl
+  data = df_long, 
+  family = binomial
 )
 
-m_cohesion_mod <- glmer(
-  choice ~ group * block * cohesion_c + reward * effort + school +
+# Base model: susceptibility main effect only
+m_suscept_base <- glmmTMB(
+  choice ~ group * block * target + susceptibility_c + 
+           reward * effort + school +
     (1 + block | ppn),
-  data = df_climate, family = binomial,
-  control = ctrl
+  data = df_long, 
+  family = binomial
 )
 
-anova(m_cohesion_base, m_cohesion_mod)
-summary(m_cohesion_mod)
-
+# Compare models
+print(anova(m_suscept_base, m_suscept_simpler, m_suscept_3way, m_suscept_full, test = "Chisq"))
 
 
 ```
 
+
+### Classroom Cohesion Moderation
+
+Since cohesion is aggregated, we need the random intercept for class in these models
+
+```{r}
+
+# Full model with four-way interaction + class random effect
+m_cohesion_full_class <- glmmTMB(
+  choice ~ group * block * target * cohesion_c + 
+    reward * effort + school +
+    (1 + block | ppn) + (1 | class),
+  data = df_long, 
+  family = binomial
+)
+
+# Check if class random effect is needed
+m_cohesion_full_noclass <- glmmTMB(
+  choice ~ group * block * target * cohesion_c + 
+    reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+)
+
+print(anova(m_cohesion_full_noclass, m_cohesion_full_class, test = "Chisq"))
+
+
+# Model with only cohesion × group × block
+m_cohesion_simpler_class <- glmmTMB(
+  choice ~ group * block * cohesion_c + target + 
+    target:group + target:block +
+    reward * effort + school +
+    (1 + block | ppn) + (1 | class),
+  data = df_long, 
+  family = binomial
+)
+
+# Base model: cohesion main effect only
+m_cohesion_base_class <- glmmTMB(
+  choice ~ group * block * target + cohesion_c + 
+    reward * effort + school +
+    (1 + block | ppn) + (1 | class),
+  data = df_long, 
+  family = binomial
+)
+
+# Compare models
+
+print(anova(m_cohesion_base_class, 
+            m_cohesion_simpler_class, 
+            m_cohesion_full_class, test = "Chisq"))
+
+  
+```
+
+Note: I'm still gonna add the rest of the analysis
