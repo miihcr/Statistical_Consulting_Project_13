@@ -374,6 +374,10 @@ saveRDS(
 ```
 
 
+# Composite score
+
+## Option 1: without PCA
+
 Create a composite score by standardizing it, and afterwards converting it to a 0-100 scale.
 
 ```{r}
@@ -439,6 +443,74 @@ cohesion_data_index |>
          mean_nominations,
          cohesion_index_100) |> 
   arrange(desc(cohesion_index_100))
+
+
+```
+
+
+## Option 2: with PCA
+
+Instead of using them all arbitrarily, we could perform PCA to see which of metrics explain the most amount of variation in cohesion.
+
+
+Positive indicators: density_directed, density_reciprocal, reciprocity, transitivity, largest_component_size, mean_nominations
+
+Negative indicators: path_length_mean (shorter = better), n_components (fewer = better) - these we will flip before PCA
+
+```{r}
+
+# Merge the data
+
+cohesion_data <- network_summary |> 
+  left_join(class_summary, by = "class")
+
+# Prepare variables for PCA
+
+cohesion_vars <- cohesion_data |> 
+  mutate(
+    path_length_mean = -path_length_mean,  # flip (shorter paths = better)
+    n_components     = -n_components       # flip (fewer components = better)
+  ) |> 
+  select(
+    density_directed,
+    density_reciprocal,
+    reciprocity,
+    transitivity,
+    path_length_mean,
+    n_components,
+    largest_component_size,
+    mean_nominations
+  )
+
+# Standardise variables (required for PCA)
+cohesion_scaled <- scale(cohesion_vars)
+
+# Ensure no missing rows
+cohesion_scaled <- cohesion_scaled[complete.cases(cohesion_scaled), ]
+
+# Run PCA
+
+pca_res <- prcomp(cohesion_scaled, center = TRUE, scale. = FALSE)
+
+
+# Check variance explained and loadings
+
+summary(pca_res)
+
+pca_res$rotation
+
+# Extract cohesion index (PC1 scores)
+
+cohesion_data$Cohesion_PC1 <- pca_res$x[,1]
+
+# 0-100 scale
+
+cohesion_data <- cohesion_data |> 
+  mutate(
+    Cohesion_norm_01 = (Cohesion_PC1 - min(Cohesion_PC1)) /
+                       (max(Cohesion_PC1) - min(Cohesion_PC1)),
+    Cohesion_norm_100 = round(Cohesion_norm_01 * 100, 1)
+  )
 
 
 ```
