@@ -513,5 +513,18 @@ cohesion_data <- cohesion_data |>
   )
 
 
+
+```
+
+Save cohesion data
+
+```{r}
+
+# RDS saves the factors etc 
+saveRDS(
+  cohesion_data,
+  here::here("data","processed","cohesion_data.rds")
+)
+
 ```
 

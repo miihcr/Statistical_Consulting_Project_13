@@ -94,6 +94,7 @@ anova(m_no_3way, m_full, test = "Chisq") # model without 3way is better but we r
 final_model <- m_full
 
 summary(final_model)
+
 # Compare with a baseline model
 anova(m0, final_model, test = "Chisq")
 
@@ -141,33 +142,47 @@ nams <- rownames(summary(final_model)$ coefficients)
 
 ## 2. Post-hoc Analyses 
 
+
+
 ### 1. Reward $\times$ Effort interaction
 
 
 ```{r}
 
-# 1. EMM for all combinations of reward x effort
+# dir.create("figures/regression-plots", recursive = TRUE, showWarnings = FALSE)
+
+# 1. Predicted probabilities 
+
+# Predictions for all reward × effort combinations
+gg_re <- ggpredict(final_model, terms = c("reward", "effort"))
+gg_re
+
+
+# visualization
+
+int_1 <- plot(gg_re) +
+  labs(
+    title = "Predicted Probability of High-Effort Choice",
+    y = "P(High-Effort Choice)",
+    x = "Reward (points)"
+  )
+
+
+ggsave("figures/regression-plots/int_1.png",  
+       plot = int_1,
+       width = 7, height = 5, dpi = 300)
+
+
+# 2. Pairwise comparisons
 
 emm_re <- emmeans(final_model, ~ reward * effort, type = "response")
 
-
-# 2. Pairwise comparisons 
-
-# Reward effects within each effort level: Do high rewards increase choice probability equally at 40% and 90% effort?
-
+# Reward effects within each effort level
 contrast(emm_re, "pairwise", by = "effort", adjust = "holm")
 
-
-# Effort effects within each reward level: Is 90% chosen less often than 40% at each reward magnitude?
-
+# Effort effects within each reward level
 contrast(emm_re, "pairwise", by = "reward", adjust = "holm")
 
-# Visualization
-
-emmip(final_model, effort ~ reward, CIs = TRUE, type = "response") +
-  labs(title = "Predicted Probability of High-Effort Choice",
-       y = "P(High-Effort Choice)",
-       x = "Reward (points)")
 
 ```
 
@@ -178,31 +193,35 @@ emmip(final_model, effort ~ reward, CIs = TRUE, type = "response") +
 
 ```{r}
 
-# 1. EMM for all combinations of target x group
+# 1. Predicted probabilities
 
-emm_tg <- emmeans(final_model, ~ target * group, type = "response")
+gg_tg <- ggpredict(final_model, terms = c("target", "group"))
+gg_tg
+
+# visualization
+
+int_2 <- plot(gg_tg) +
+  labs(
+    title = "Predicted Probability of High-Effort Choice",
+    y = "P(High-Effort Choice)",
+    x = "Social Target"
+  )
 
 
+ggsave("figures/regression-plots/int_2.png",  
+       plot = int_2,
+       width = 7, height = 5, dpi = 300)
 
 # 2. Pairwise comparisons 
 
+emm_tg <- emmeans(final_model, ~ target * group, type = "response")
 
-# Target differences within each group: Do groups differ in how they respond to Self vs Climate vs Prosocial cues?
-
-
+# Target differences within each group
 contrast(emm_tg, "pairwise", by = "group", adjust = "holm")
-  
-  
-# Group differences within each target: Do the norm groups differ in climate choices overall (pre+post averaged)?
 
+# Group differences within each target
 contrast(emm_tg, "pairwise", by = "target", adjust = "holm")
 
-# Visualization
-
-emmip(emm_tg, group ~ target, CIs = TRUE, type = "response") +
-  labs(title = "Predicted Probability of High-Effort Choice",
-       y = "P(High-Effort Choice)",
-       x = "Social Target")
 
 
 ```
@@ -212,38 +231,50 @@ emmip(emm_tg, group ~ target, CIs = TRUE, type = "response") +
 
 ```{r}
 
-# EMM for the full 3 way interaction
+# 1. Predicted probabilities
+
+gg_tgb <- ggpredict(m_full, terms = c("target", "group", "block"))
+gg_tgb
+
+
+# visualization
+int_3 <- plot(gg_tgb) +
+  labs(
+    title = "Predicted Probability of High-Effort Choice",
+    y = "P(High-Effort Choice)",
+    x = "Block"
+  )
+
+ggsave("figures/regression-plots/int_3.png",  
+       plot = int_3,
+       width = 7, height = 5, dpi = 300)
+
+
+
+# Difference in differences 
 emm_tgb <- emmeans(m_full, ~ target * group * block, type = "response")
 
-emm_tgb
+# Pre → Post change within target × group
+prepost_tgb <- contrast(
+  emm_tgb,
+  method = "revpairwise",
+  by = c("target", "group"),
+  type = "response"
+)
 
-# Pre-to-Post changes within each target × group combination
-
-prepost_tgb <- contrast(emm_tgb, method="revpairwise", by = c("target","group"),
-                        type = "response")
-# Difference-in-Differences: Compare pre-post changes across groups for each target
-
-
+# DID: Compare pre-post changes across groups (within each target)
 did_by_target <- contrast(
   emm_tgb,
-  interaction = c("pairwise", "revpairwise"),  # group pairwise, block revpairwise
+  interaction = c("pairwise", "revpairwise"),
   by = "target",
   adjust = "holm",
   type = "response"
 )
 
-print(did_by_target)
-
-# Visualization
-emmip(final_model, group ~ block | target, type = "response", CIs = TRUE) +
-  labs(title = "Predicted Probability of High-Effort Choice",
-       y = "P(High-Effort Choice)",
-       x = "Block") 
-
-
-# Create a summary of the DID analysis for easy reporting
+# Convert to table for reporting
 did_summary <- as.data.frame(did_by_target)
 print(did_summary)
+
 
 ```
 
@@ -271,7 +302,7 @@ plotResiduals(sim) # residuals vs predicted only
 
 testUniformity(sim)      # Should be non-significant
 testDispersion(sim)      # Should be non-significant
-testOutliers(sim)       # OK if significant for GLMMs, consider type="bootstrap" if significant
+testOutliers(sim)     # OK if significant for GLMMs, consider type="bootstrap" if significant
 
 # 4. Predictor-specific residual checks
 
@@ -281,9 +312,6 @@ mf <- model.frame(final_model) # because of NA values
 plotResiduals(sim, mf$target)
 plotResiduals(sim, mf$group)
 plotResiduals(sim, mf$block)
-plotResiduals(sim, mf$school)
-plotResiduals(sim, mf$reward)
-plotResiduals(sim, mf$effort)
 
 
 # 5. Grouped residuals (random-effects diagnostic)
@@ -299,6 +327,44 @@ performance::r2(final_model)
 r2_nakagawa(final_model)
 
 ```
+
+
+```{r}
+# Save plots
+
+getwd()
+
+dir.create("figures/diagnostics", recursive = TRUE, showWarnings = FALSE)
+
+
+w <- 7
+h <- 5
+dpi <- 300
+
+# Main dharma plot
+
+png("figures/diagnostics/dharma_main.png", width = w, height = h, units = "in", res = dpi)
+plot(sim)
+dev.off()
+
+
+png("figures/diagnostics/dharma_random.png", width = w, height = h, units = "in", res = dpi)
+plot(sim_ppn)
+dev.off()
+
+
+png("figures/diagnostics/lattice_random.png", width = w, height = h, units = "in", res = dpi)
+randoms1 <- ranef(final_model)
+lattice::qqmath(randoms1)
+dev.off()
+
+
+```
+
+
+
+
+
 
 ## Research Question 2: Moderation Analysis
 
@@ -413,4 +479,80 @@ print(anova(m_cohesion_base_class,
   
 ```
 
-Note: I'm still gonna add the rest of the analysis
+### Post-hoc analyses
+
+```{r}
+
+pred <- ggpredict(
+  m_suscept_simpler,
+  terms = c("group", "susceptibility_c [-1, 0, 1]")
+)
+
+model2_plot1 <- plot(pred) +
+  ggplot2::theme_bw() +
+  ggplot2::labs(
+    x = "Group",
+    y = "Predicted probability of choice",
+    color = "Susceptibility (SD)"
+  )
+
+
+print(model2_plot1)
+
+```
+
+
+### Model Diagnostics
+
+```{r}
+# 1. Simulate DHARMa residuals
+
+sim2 <- simulateResiduals(
+  fittedModel = m_suscept_simpler,
+  n = 1000,
+  plot = FALSE
+)
+
+
+# 2. Main diagnostic plots
+
+plot(sim2) # QQ + residuals vs fitted
+
+plotQQunif(sim2)  # QQ only
+plotResiduals(sim2) # residuals vs predicted only
+
+# 3. Global statistical tests
+
+testUniformity(sim2)      # Should be non-significant
+testDispersion(sim2)      # Should be non-significant
+testOutliers(sim2)       # OK if significant for GLMMs, consider type="bootstrap" if significant
+
+# 4. Predictor-specific residual checks
+
+mf <- model.frame(m_suscept_simpler) # because of NA values 
+
+
+plotResiduals(sim2, mf$target)
+plotResiduals(sim2, mf$group)
+plotResiduals(sim2, mf$block)
+plotResiduals(sim2, mf$school)
+plotResiduals(sim2, mf$reward)
+plotResiduals(sim2, mf$effort)
+
+
+# 5. Grouped residuals (random-effects diagnostic)
+sim_ppn2 <- recalculateResiduals(sim2, group = mf$ppn)
+plot(sim_ppn2)
+testDispersion(sim_ppn2)
+
+
+performance::icc(m_suscept_simpler)
+
+performance::r2(m_suscept_simpler)
+
+r2_nakagawa(m_suscept_simpler)
+
+
+```
+
+

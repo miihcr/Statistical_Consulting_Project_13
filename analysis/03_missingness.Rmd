@@ -24,73 +24,227 @@ df_wide <- read.csv(here::here("data","raw","data_2.csv"))
 
 prop_miss(df_wide)
 
-
 print(miss_var_summary(df_wide), n=50) # Missingness per variable
 
 df_wide |> miss_case_summary() # Missingness per case
  
-aggr(df_wide, numbers = TRUE, prop = FALSE)
+aggr(df_wide, numbers = TRUE, prop = FALSE) # missing pattern
 
 
 ```
 
 
-## 2. Create missingness indicator
+## 2. Create missingness indicators and recode variables
+
 
 ```{r}
 
-df_glm <- df_wide |> 
+f_missing <- df_wide |> 
   mutate(
-    miss_SUS = if_else(is.na(SUS_1), 1, 0),
-    miss_X2 = if_else(
-      rowSums(across(starts_with("X2_"), ~ is.na(.x))) > 0, 
-      1, 0
-    )
+    # Missingness indicators 
+    missing_nom_like = factor(if_else(is.na(nom_like), 1, 0)),
+    missing_SUS = factor(if_else(
+      rowSums(across(starts_with("SUS_"), is.na)) > 0, 1, 0
+    )),
+    missing_X2 = factor(if_else(
+      rowSums(across(starts_with("X2_"), is.na)) > 0, 1, 0
+    )),
+    
+    # Total missing per person
+    num_missing = rowSums(across(everything(), is.na)),
+    
+    # recode X1 variables: 1 → 0 (high effort), 2 → 1 (low effort)
+    across(starts_with("X1_"), ~ factor(case_when(
+      .x == 1 ~ 0L,
+      .x == 2 ~ 1L,
+      TRUE ~ NA_integer_
+    ), levels = c(0, 1))),
+    
+    # Convert demographics to factors
+    school = factor(school),
+    class = factor(class),
+    group = factor(group),
+    
+    # SUS numeric
+    across(starts_with("SUS_"), as.numeric)
   )
 
+# Get X1 variable names
+vars_X1 <- grep("^X1_", names(df_missing), value = TRUE)
 
 ```
 
-Does missingness depend on observed variables?
+Does missingness depend on observed variables? If so, this would indicate Missing at Random (MAR).
+
+
+
+## 2.1. Missingness in nom_like
 
 ```{r}
 
-# ---- t-tests for continuous variables ----
-t.test(X1_SELF_2easy40 ~ miss_SUS, data = df_glm)
-t.test(X1_CLIMATE_6easy40 ~ miss_X2, data = df_glm)
+# Check expected counts before chi-square and use fisher if expected counts are < 5
 
-# ---- chi square tests for categorical variables ----
-chisq.test(table(df_glm$miss_SUS, df_glm$group))
-chisq.test(table(df_glm$miss_X2, df_glm$school))
-chisq.test(table(df_glm$miss_SUS, df_glm$class))
+# School
+cat("\n--- School ---\n")
+expected_nom_school <- chisq.test(table(df_missing$missing_nom_like, df_missing$school))$expected
+print(expected_nom_school)
+if (any(expected_nom_school < 5)) {
+  fisher.test(table(df_missing$missing_nom_like, df_missing$school))
+} else {
+  chisq.test(table(df_missing$missing_nom_like, df_missing$school))
+}
 
+# Class
+cat("\n--- Class ---\n")
+expected_nom_class <- chisq.test(table(df_missing$missing_nom_like, df_missing$class))$expected
+print(expected_nom_class)
+if (any(expected_nom_class < 5)) {
+  fisher.test(table(df_missing$missing_nom_like, df_missing$class))
+} else {
+  chisq.test(table(df_missing$missing_nom_like, df_missing$class))
+}
 
+# Group
+cat("\n--- Group ---\n")
+expected_nom_group <- chisq.test(table(df_missing$missing_nom_like, df_missing$group))$expected
+print(expected_nom_group)
+if (any(expected_nom_group < 5)) {
+  fisher.test(table(df_missing$missing_nom_like, df_missing$group))
+} else {
+  chisq.test(table(df_missing$missing_nom_like, df_missing$group))
+}
 
-# Logistic regression
-
-# ---- SUS missingness ----
-model_sus_group  <- glm(miss_SUS ~ group + school, family = binomial, data = df_glm)
-
-model_sus_school <- glm(miss_SUS ~ school, family = binomial, data = df_glm)
-
-model_sus_x1     <- glm(miss_SUS ~ X1_SELF_2easy40 + X1_CLIMATE_2easy40, family = binomial, data = df_glm)
-
-
-summary(model_sus_group)
-summary(model_sus_school)
-summary(model_sus_x1)
-
-# ---- X2 missingness ----
-model <- glm(miss_X2 ~ group, family = binomial, data = df_glm)
-model_x2_school <- glm(miss_X2 ~ school, family = binomial, data = df_glm)
-model_x2_x1     <- glm(miss_X2 ~ 
-                         X1_CLIMATE_2easy40, family = binomial, data = df_glm)
-
-summary(model)
-summary(model_x2_school)
-summary(model_x2_x1)
-
+# X1 variables → nom_like missingness
+cat("\n--- X1 Variables ---\n")
+for (var in vars_X1) {
+  tbl <- table(df_missing[[var]], df_missing$missing_nom_like)
+  cat("\n", var, "\n")
+  
+  expected <- chisq.test(tbl)$expected
+  if (any(expected < 5)) {
+    print(fisher.test(tbl))
+  } else {
+    print(chisq.test(tbl))
+  }
+}
 
 ```
 
-Some tests are significant, which indicate Missing at Random (MAR). Thsi means missingness is related to other variables in the dataset, but not to the missing value itself.
+## 2.2. Missingness in SUS
+
+```{r}
+
+# Group
+cat("\n--- Group ---\n")
+expected_group <- chisq.test(table(df_missing$missing_SUS, df_missing$group))$expected
+print(expected_group)
+if (any(expected_group < 5)) {
+  fisher.test(table(df_missing$missing_SUS, df_missing$group))
+} else {
+  chisq.test(table(df_missing$missing_SUS, df_missing$group))
+}
+
+# School
+cat("\n--- School ---\n")
+expected_school <- chisq.test(table(df_missing$missing_SUS, df_missing$school))$expected
+print(expected_school)
+if (any(expected_school < 5)) {
+  fisher.test(table(df_missing$missing_SUS, df_missing$school))
+} else {
+  chisq.test(table(df_missing$missing_SUS, df_missing$school))
+}
+
+# Class
+cat("\n--- Class ---\n")
+expected_class <- chisq.test(table(df_missing$missing_SUS, df_missing$class))$expected
+print(expected_class)
+fisher.test(table(df_missing$missing_SUS, df_missing$class))
+
+# X1 variables 
+cat("\n--- X1 Variables ---\n")
+for (var in vars_X1) {
+  tbl <- table(df_missing[[var]], df_missing$missing_SUS)
+  cat("\n", var, "\n")
+  
+  if (any(chisq.test(tbl)$expected < 5)) {
+    print(fisher.test(tbl))
+  } else {
+    print(chisq.test(tbl))
+  }
+}
+
+```
+
+
+## 2.3. Missingness in X2 variables
+
+
+```{r}
+
+# Group
+cat("\n--- Group ---\n")
+expected_x2_group <- chisq.test(table(df_missing$missing_X2, df_missing$group))$expected
+print(expected_x2_group)
+fisher.test(table(df_missing$missing_X2, df_missing$group))
+
+# School
+cat("\n--- School ---\n")
+expected_x2_school <- chisq.test(table(df_missing$missing_X2, df_missing$school))$expected
+print(expected_x2_school)
+fisher.test(table(df_missing$missing_X2, df_missing$school))
+
+# Class
+cat("\n--- Class ---\n")
+expected_x2_class <- chisq.test(table(df_missing$missing_X2, df_missing$class))$expected
+print(expected_x2_class)
+fisher.test(table(df_missing$missing_X2, df_missing$class))
+
+# X1 variables → X2 missingness
+cat("\n--- X1 Variables ---\n")
+for (var in vars_X1) {
+  tbl <- table(df_missing[[var]], df_missing$missing_X2)
+  cat("\n", var, "\n")
+  
+  if (any(chisq.test(tbl)$expected < 5)) {
+    print(fisher.test(tbl))
+  } else {
+    print(chisq.test(tbl))
+  }
+}
+
+```
+
+
+## 3. Do people who are missing nom_like, SUS, and X2 also tend to have more missing values overall?
+
+
+```{r}
+
+# A. Missing nom_like
+cat("\n--- nom_like ---\n")
+t.test(num_missing ~ missing_nom_like, data = df_missing)
+
+# B. Missing SUS
+cat("\n--- SUS ---\n")
+t.test(num_missing ~ missing_SUS, data = df_missing)
+
+# C. Missing X2
+cat("\n--- X2 ---\n")
+t.test(num_missing ~ missing_X2, data = df_missing)
+
+```
+
+Summary
+
+```{r}
+
+cat("Overall missingness:", round(prop_miss(df_wide) * 100, 2), "%\n")
+cat("nom_like missing:", sum(df_missing$missing_nom_like == 1), 
+    "participants (", round(mean(df_missing$missing_nom_like == 1) * 100, 2), "%)\n")
+cat("SUS missing:", sum(df_missing$missing_SUS == 1), 
+    "participants (", round(mean(df_missing$missing_SUS == 1) * 100, 2), "%)\n")
+cat("X2 missing:", sum(df_missing$missing_X2 == 1), 
+    "participants (", round(mean(df_missing$missing_X2 == 1) * 100, 2), "%)\n")
+
+```
+
