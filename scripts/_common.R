@@ -16,7 +16,7 @@ for (pkg in pkgs) {
 
 # ---- knitr & ggplot defaults (safe to call from Rmds) ----
 if (requireNamespace("knitr", quietly = TRUE)) {
-  knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+  knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 }
 theme_set(ggplot2::theme_minimal())
 

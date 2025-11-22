@@ -5,7 +5,6 @@ date: "2025-11-04"
 output: pdf_document
 ---
 
-
 ```{r setup, include=FALSE}
 
 source(here::here("scripts","_common.R"), local = knitr::knit_global())
@@ -16,10 +15,10 @@ df_long <- readRDS(here::here("data","processed","df_long.rds"))
 
 ```
 
-# 1) Helper functions
+
+# Helper functions
 
 ```{r}
-# Standard error
 
 # Color palettes consistent across plots
 
@@ -40,110 +39,302 @@ pal_group <- c(
 pd <- position_dodge(width = 0.7)
 
 
-```
-
-# 2) Participant-Level Summaries
-
-```{r}
-
-participant_summary <- df_wide |>
-summarise(
-N = n(),
-N_classes = n_distinct(class),
-N_schools = n_distinct(school)
+group_labels <- c(
+  "control"       = "Control Group",
+  "positive_norm" = "Positive Norm",
+  "negative_norm" = "Negative Norm"
 )
 
-participant_summary
 
 ```
 
-# 3) Moderators
-## Susceptibility
+# Descriptive Statistics
 
-```{r}
+## 1. Sample Characteristics
 
-susceptibility_descriptives <- df_long |>
-summarise(
-M   = mean(susceptibility, na.rm = TRUE),
-SD  = sd(susceptibility, na.rm = TRUE),
-Min = min(susceptibility, na.rm = TRUE),
-Max = max(susceptibility, na.rm = TRUE)
-)
+Currently we do not have demographic information, thus the r chunk below does not run. Should any of this information be available in the future, the following entries should be removed from the r chunk below.
 
-susceptibility_descriptives
-
-```
-
-## Classroom Cohesion
-
-
-
-# 4) Manipulation Condition Counts
-
-
-```{r}
-condition_summary <- df_wide |>
-group_by(school, group) |>
-summarise(n = n(), .groups = "drop") |>
-tidyr::pivot_wider(names_from = group, values_from = n, values_fill = 0)
-
-condition_summary
-
+```{=latex}
+\begin{verbatim}
+ include = FALSE, eval = FALSE
+\end{verbatim}
 ```
 
 
-# 5) Choice Summaries
+```{r, include = FALSE, eval = FALSE}
 
-a) Per-participant (ppn) proportions
+# Basic demographics
 
-```{r}
+# Overall sample
+nrow(df_wide)  # Total N
+table(df_wide$gender)
+mean(df_wide$age, na.rm = TRUE)
+sd(df_wide$age, na.rm = TRUE)
+range(df_wide$age, na.rm = TRUE)
 
-summary_ppn <- df_long |>
-group_by(ppn, target, block, group) |>
-summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop")
-
-summary_ppn
-
-```
-
-b) Group-level summary (Target $\times$ Block $\times$ Group)
-
-```{r}
-
-choice_summary <- summary_ppn |>
-  group_by(target, block, group) |>
+# By school
+df_wide |> 
+  group_by(school) |> 
   summarise(
-    n  = n(),
-    M  = mean(prop_per_ppn, na.rm = TRUE),
-    SE = se(prop_per_ppn),
-    .groups = "drop"
+    n = n(),
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE)
   )
 
-choice_summary
+# By experimental group
+df_wide |> 
+  group_by(group) |> 
+  summarise(
+    n = n(),
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    n_female = sum(gender == "female", na.rm = TRUE),
+    pct_female = mean(gender == "female", na.rm = TRUE) * 100
+  )
 
 ```
 
-c) Reward $\times$ Effort summary (across participants)
+## 2. Primary Outcome: Choice Behaviour
+
+```{r}
+# Overall choice rates
+df_long  |> 
+  summarise(
+    mean_choice = mean(choice, na.rm = TRUE),
+    sd_choice = sd(choice, na.rm = TRUE)
+  )
+
+# By target type
+df_long |> 
+  group_by(target) |> 
+  summarise(
+    mean_choice = mean(choice, na.rm = TRUE),
+    sd_choice = sd(choice, na.rm = TRUE),
+    n_trials = n()
+  )
+
+# By group and block (most important!)
+df_long |> 
+  group_by(group, block) |> 
+  summarise(
+    mean_choice = mean(choice, na.rm = TRUE),
+    sd_choice = sd(choice, na.rm = TRUE),
+    n_trials = n()
+  )
+
+# By all three factors (for comprehensive table)
+df_long |> 
+  group_by(target, group, block) |> 
+  summarise(
+    M = mean(choice, na.rm = TRUE),
+    SD = sd(choice, na.rm = TRUE)
+  ) |> 
+  arrange(target, group, block)
+
+
+```
+
+
+## 3. Task Controls: Reward and Effort
 
 ```{r}
 
-choice_by_params <- df_long |>
-  group_by(ppn, reward, effort) |>
-  summarise(prop_per_ppn = mean(choice, na.rm = TRUE), .groups = "drop") |>
-  group_by(reward, effort) |>
+# Choice rates by reward level
+df_long |> 
+  group_by(reward) |> 
   summarise(
-    n  = n(),
-    M  = mean(prop_per_ppn),
-    SE = se(prop_per_ppn),
-    .groups = "drop"
+    mean_choice = mean(choice, na.rm = TRUE),
+    sd_choice = sd(choice, na.rm = TRUE)
   )
 
-choice_by_params
+# Choice rates by effort level
+df_long |> 
+  group_by(effort) |> 
+  summarise(
+    mean_choice = mean(choice, na.rm = TRUE),
+    sd_choice = sd(choice, na.rm = TRUE)
+  )
+
+# Reward × Effort interaction pattern
+df_long |> 
+  group_by(reward, effort) |> 
+  summarise(
+    mean_choice = mean(choice, na.rm = TRUE),
+    sd_choice = sd(choice, na.rm = TRUE)
+  )
 ```
+
+## 4. Moderator Variables
+
+```{r}
+
+sus_scores <- df_wide |> 
+  select(starts_with("SUS_")) |>
+  mutate(across(everything(), as.numeric))
+
+sus_scores
+
+str(sus_scores)
+
+# Reliability
+psych::alpha(sus_scores, use = "pairwise")$total# alpha
+psych::omega(sus_scores, use = "pairwise")$omega.tot # omega total
+
+
+# Total score 
+
+SUS_total <- rowMeans(sus_scores, na.rm=TRUE)
+
+describe(SUS_total) # descriptives for SUS
+
+hist(SUS_total)
+
+
+```
+
+## 5. Ceiling Effects
+
+```{r}
+
+
+# By participant overall
+ceiling_participants <- df_long |> 
+  group_by(ppn) |> 
+  summarise(
+    prop_high_effort = mean(choice, na.rm = TRUE)
+  ) |> 
+  summarise(
+    at_90 = sum(prop_high_effort >= 0.90),
+    pct_90 = mean(prop_high_effort >= 0.90) * 100,
+    at_95 = sum(prop_high_effort >= 0.95),
+    pct_95 = mean(prop_high_effort >= 0.95) * 100,
+    at_100 = sum(prop_high_effort == 1.00),
+    pct_100 = mean(prop_high_effort == 1.00) * 100
+  )
+
+print(ceiling_participants)
+
+# By participant and block
+ceiling_by_block <- df_long |> 
+  group_by(ppn, block) |> 
+  summarise(
+    prop_high_effort = mean(choice, na.rm = TRUE),
+    .groups = "drop"
+  ) |> 
+  group_by(block) |> 
+  summarise(
+    n_at_90 = sum(prop_high_effort >= 0.90),
+    pct_at_90 = mean(prop_high_effort >= 0.90) * 100,
+    n_at_95 = sum(prop_high_effort >= 0.95),
+    pct_at_95 = mean(prop_high_effort >= 0.95) * 100,
+    n_at_100 = sum(prop_high_effort == 1.00),
+    pct_at_100 = mean(prop_high_effort == 1.00) * 100
+  )
+
+print(ceiling_by_block)
+
+
+# Calculate proportion of high-effort choices per participant
+participant_props <- df_long |> 
+  group_by(ppn) |> 
+  summarise(
+    prop_high_effort = mean(choice, na.rm = TRUE)
+  )
+
+# Descriptives
+summary(participant_props$prop_high_effort)
+quantile(participant_props$prop_high_effort, probs = c(0.25, 0.5, 0.75))
+
+# How many chose high effort 100% of the time?
+sum(participant_props$prop_high_effort == 1.0)
+mean(participant_props$prop_high_effort == 1.0) * 100
+
+# Histogram
+
+ggplot(participant_props, aes(x = prop_high_effort)) +
+  geom_histogram(binwidth = 0.05, fill = "steelblue", color = "white") +
+  scale_x_continuous(limits = c(0, 1), 
+                     breaks = seq(0, 1, 0.1),
+                     labels = scales::percent) +
+  labs(x = "Proportion of high-effort choices",
+       y = "Number of participants",
+       title = "Distribution of High-Effort Choice Rates Across Participants") +
+  theme_minimal() +
+  geom_vline(xintercept = 0.90, linetype = "dashed", color = "red") +
+  annotate("text", x = 0.85, y = max(table(cut(participant_props$prop_high_effort, breaks = 20))), 
+           label = "90% threshold", color = "red")
+
+
+# Standard deviation of choices (within-person)
+within_person_variability <- df_long|> 
+  group_by(ppn)|> 
+  summarise(
+    sd_choice = sd(choice, na.rm = TRUE),
+    var_choice = var(choice, na.rm = TRUE)
+  )|> 
+  summarise(
+    mean_sd = mean(sd_choice, na.rm = TRUE),
+    median_sd = median(sd_choice, na.rm = TRUE),
+    n_zero_var = sum(sd_choice == 0, na.rm = TRUE),
+    pct_zero_var = mean(sd_choice == 0, na.rm = TRUE) * 100
+  )
+
+print(within_person_variability)
+
+
+# Ceiling by experimental conditions
+ceiling_by_group <- df_long|> 
+  group_by(ppn, group)|> 
+  summarise(
+    prop_high_effort = mean(choice, na.rm = TRUE),
+    .groups = "drop"
+  )|> 
+  group_by(group)|> 
+  summarise(
+    n_at_90 = sum(prop_high_effort >= 0.90),
+    pct_at_90 = mean(prop_high_effort >= 0.90) * 100,
+    mean_prop = mean(prop_high_effort),
+    sd_prop = sd(prop_high_effort),
+    median_prop = median(prop_high_effort)
+  )
+
+print(ceiling_by_group)
+
+
+# table
+ceiling_summary <- df_long |> 
+  group_by(ppn)|> 
+  summarise(
+    prop = mean(choice, na.rm = TRUE),
+    sd = sd(choice, na.rm = TRUE)
+  )|> 
+  summarise(
+    mean = mean(prop),
+    sd = sd(prop),
+    median = median(prop),
+    q25 = quantile(prop, 0.25),
+    q75 = quantile(prop, 0.75),
+    min = min(prop),
+    max = max(prop),
+    n_90 = sum(prop >= 0.90),
+    pct_90 = mean(prop >= 0.90) * 100,
+    n_95 = sum(prop >= 0.95),
+    pct_95 = mean(prop >= 0.95) * 100,
+    n_100 = sum(prop == 1.00),
+    pct_100 = mean(prop == 1.00) * 100,
+    mean_within_sd = mean(sd, na.rm = TRUE),
+    n_zero_var = sum(sd == 0, na.rm = TRUE),
+    pct_zero_var = mean(sd == 0, na.rm = TRUE) * 100
+  )
+
+print(ceiling_summary)
+
+```
+
 
 # Visualizations
 
-a) Reward $\times$ Effort interaction
+a)  Reward $\times$ Effort interaction
 
 ```{r}
 
@@ -152,7 +343,7 @@ plot_a_data <- df_long |>
   summarise(p = mean(choice == 1, na.rm = TRUE), .groups = "drop")
 
 
-reward_effort_plot <- reward_effort_summary |>
+reward_effort_plot <- plot_a_data |>
   ggplot(aes(x = reward, y = p, color = effort, group = effort)) +
   geom_point(size = 3) +
   geom_line(size = 1) +
@@ -160,6 +351,7 @@ reward_effort_plot <- reward_effort_summary |>
     "40%" = "#E15759",
     "90%" = "#4E79A7"
   )) +
+  scale_y_continuous(limits = c(0, 1)) +
   labs(
     x = "Reward",
     y = "Proportion of High-Effort Choices",
@@ -176,8 +368,7 @@ ggsave("figures/descriptives/reward_effort_plot.png",
 
 ```
 
-
-b) Target $\times$ Block $\times$ Group
+b)  Target $\times$ Block $\times$ Group
 
 ```{r}
 
@@ -190,8 +381,8 @@ plot_b_data <- df_long |>
   )
 
 
-target_block_group_plot <- ggplot(plot_b_data,
-       aes(x = block,
+target_block_group_plot <- plot_b_data |> 
+  ggplot(aes(x = block,
            y = p_choice,
            color = target,
            group = target)) +
@@ -203,6 +394,7 @@ target_block_group_plot <- ggplot(plot_b_data,
     y     = "Proportion of High-Effort Choices",
     color = "Target"
   ) +
+  scale_y_continuous(limits = c(0, 1)) +
   scale_color_manual(values = pal_target) +
   theme_bw() +
   theme(
@@ -215,7 +407,3 @@ ggsave("figures/descriptives/target_block_group_plot.png",
        width = 7, height = 5, dpi = 300)
 
 ```
-
-
-
-

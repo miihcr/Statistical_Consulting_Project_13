@@ -8,6 +8,18 @@ output: pdf_document
 ```{r setup, include=FALSE}
 source(here::here("scripts","_common.R"), local = knitr::knit_global())
 
+# Function to extract key fit indices
+fit_table <- function(fit) {
+data.frame(
+ChiSq = fitMeasures(fit, "chisq"),
+df = fitMeasures(fit, "df"),
+CFI = fitMeasures(fit, "cfi"),
+TLI = fitMeasures(fit, "tli"),
+RMSEA = fitMeasures(fit, "rmsea"),
+SRMR = fitMeasures(fit, "srmr")
+)
+}
+
 ```
 
 ## Social susceptibility
@@ -62,6 +74,8 @@ alpha_value3
 
 Also a good fit, might make sense to combine all of them together. The internal consistency of the all items: Cronbach’s alpha = `r round(alpha_value3, 3)`
 
+comment: I suggest we removed the EFA analysis
+
 ### EFA
 
 ```{r}
@@ -109,7 +123,9 @@ We see that 2 factors are also plausible, but second factor does not fit SUS 2,4
 ### CFA
 
 ```{r}
+
 # 1-factor model
+
 cfa_1f <- "
   GeneralFactor =~ SUS_1 + SUS_2 + SUS_3 + SUS_4 + SUS_5 + SUS_6 + SUS_7 + SUS_8
 "
@@ -120,13 +136,37 @@ cfa_2f <- "
   PeerEsteem    =~ SUS_2 + SUS_4 + SUS_6 + SUS_8
 "
 
-fit_1f = cfa(cfa_1f, data = sus_scores)
-fit_2f = cfa(cfa_2f, data = sus_scores)
+# fit_1f = cfa(cfa_1f, data = sus_scores)
+# fit_2f = cfa(cfa_2f, data = sus_scores)
 
-anova(fit_1f, fit_2f)
+fit1 <- cfa(
+cfa_1f,
+data = sus_scores,
+std.lv = TRUE, # factor variances are set to 1 for identification
+missing = "fiml" # missing value handling
+)
+
+
+fit2 <- cfa(
+cfa_2f,
+data = sus_scores,
+std.lv = TRUE,
+missing = "fiml"
+)
+
+
 
 summary(fit_2f, fit.measures = TRUE, standardized = TRUE)
 summary(fit_1f, fit.measures = TRUE, standardized = TRUE)
+
+
+# Fit measures
+
+fit_table(fit1)
+
+fit_table(fit2)
+
+
 ```
 
 CFA indicates that 2-factor model is significantly better (chi-sq difference test), however the the latent variables are highly correlated (std.lv), therefore it might not make sense to use two

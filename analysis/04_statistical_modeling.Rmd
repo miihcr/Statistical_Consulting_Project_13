@@ -245,6 +245,8 @@ int_3 <- plot(gg_tgb) +
     x = "Block"
   )
 
+
+
 ggsave("figures/regression-plots/int_3.png",  
        plot = int_3,
        width = 7, height = 5, dpi = 300)
@@ -334,7 +336,7 @@ r2_nakagawa(final_model)
 
 getwd()
 
-dir.create("figures/diagnostics", recursive = TRUE, showWarnings = FALSE)
+# dir.create("figures/diagnostics", recursive = TRUE, showWarnings = FALSE)
 
 
 w <- 7
@@ -555,4 +557,43 @@ r2_nakagawa(m_suscept_simpler)
 
 ```
 
+
+
+
+# Plots 
+
+```{r}
+
+group_labels <- c(
+  "control"       = "Control Group",
+  "positive_norm" = "Positive Norm",
+  "negative_norm" = "Negative Norm"
+)
+
+y <- predict_response(
+  final_model,
+  terms = c("block", "group", "target")
+)
+
+y$group <- dplyr::recode(
+  y$group,
+  !!!group_labels
+)
+
+
+plot_model1 <- plot(y) +
+  scale_y_continuous(limits = c(0, 1))
+
+
+# Plot interaction
+
+ggsave("figures/regression-plots/plot_model1.png",  
+       plot = plot_model1,
+       width = 7, height = 5, dpi = 300)
+
+
+
+
+
+```
 
