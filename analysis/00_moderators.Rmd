@@ -354,13 +354,15 @@ data = merge(data,
               by = "class",
               all.x = TRUE)
 
-names(data)[names(data) == "density_reciprocal"] = "cohesion"
+names(data)[names(data) == "density_reciprocal"] = "cohesion_recip"
 
 names(data)[names(data) == "density_directed"] = "cohesion_directed"
 
 # Center it for the analysis
-data$cohesion_c = as.numeric(scale(data$cohesion, center = TRUE, scale = FALSE))
+data$cohesion_recip_c = as.numeric(scale(data$cohesion_recip, center = TRUE, scale = FALSE))
+
 data$cohesion_directed_c = as.numeric(scale(data$cohesion_directed, center = TRUE, scale = FALSE))
+
 data$susceptibility_c = as.numeric(scale(data$susceptibility, center = TRUE, scale = FALSE))
 
 # RDS saves the factors etc 
