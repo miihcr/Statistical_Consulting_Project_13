@@ -172,9 +172,6 @@ sus_scores <- df_wide |>
   select(starts_with("SUS_")) |>
   mutate(across(everything(), as.numeric))
 
-sus_scores
-
-str(sus_scores)
 
 # Reliability
 psych::alpha(sus_scores, use = "pairwise")$total# alpha

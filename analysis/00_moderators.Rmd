@@ -156,8 +156,8 @@ missing = "fiml"
 
 
 
-summary(fit_2f, fit.measures = TRUE, standardized = TRUE)
-summary(fit_1f, fit.measures = TRUE, standardized = TRUE)
+summary(fit1, fit.measures = TRUE, standardized = TRUE)
+summary(fit2, fit.measures = TRUE, standardized = TRUE)
 
 
 # Fit measures
