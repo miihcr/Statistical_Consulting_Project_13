@@ -176,6 +176,40 @@ interpret(fit2)
 
 CFA indicates that 2-factor model is significantly better (chi-sq difference test), however the the latent variables are highly correlated (std.lv), therefore it might not make sense to use two
 
+## CFA after removing SUS_2 
+
+
+
+```{r}
+
+sus_minus2  <- sus_scores[, -2]
+
+
+model_minus2 <- '
+  F =~ SUS_1 + SUS_3 + SUS_4 + SUS_5 + SUS_6 + SUS_7 + SUS_8
+'
+
+fit_minus2 <- cfa(
+  model_minus2,
+  data    = sus_minus2,
+  std.lv  = TRUE,
+  missing = "fiml"
+)
+
+interpret(fit_minus2)
+
+anova(fit_minus2, fit1)
+
+```
+
+
+
+
+
+
+
+
+
 ## Social Cohesion
 
 ```{r}
