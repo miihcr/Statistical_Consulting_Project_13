@@ -27,44 +27,63 @@ ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
 
 ```
 
-# 1. Statistical Analysis
+# Statistical Analysis
 
-## Research Question 1 
+## Research Question 1
+
+## 1. Model Selection
 
 Do exposure to social norms about environmental behavior influence children’s effortful pro-environmental choices?
+
+### Step 1: Test whether classroom random intercept is needed
 
 ```{r}
 
 # Baseline model (intercept only)
 
 m0 <- glmer(
-  choice ~ 1 + (1 + block | ppn),  
-  data = df_long, family = binomial, control = ctrl
+  choice ~ 1 + (1 | ppn),  
+  data = df_long, 
+  family = binomial, 
+  control = ctrl
 )
 
-# Step 1: Test whether classroom random intercept is needed
 
-m1 <- glmer(
-  choice ~ target*group*block + reward*effort + school +
+m1_with_class <- glmer(
+  choice ~ target * group * block + reward * effort + school +
     (1 | ppn) + (1 | class),
-  data = df_long, family = binomial, control = ctrl
+  data = df_long, 
+  family = binomial, 
+  control = ctrl
 )
 
-m1_simpler <- glmer(
-  choice ~ target*group*block + reward*effort + school +
+
+m1_without_class <- glmer(
+  choice ~ target * group * block + reward * effort + school +
     (1 | ppn),
-  data = df_long, family = binomial, control = ctrl
+  data = df_long, 
+  family = binomial, 
+  control = ctrl
 )
 
+
 # Compare models
-print(anova(m1_simpler, m1, test = "Chisq"))
-print(isSingular(m1))
-print(VarCorr(m1))
+print(anova(m1_without_class, m1_with_class))
+
+# Check for singularity
+
+print(VarCorr(m1_with_class))
 
 
+```
 
-# Step 2: Add random slope for Block
-m_full <- glmer(
+Decision: Use model without class random intercept.
+
+### Step 2: Test whether random slopes for block is needed
+
+```{r}
+
+m_rslopes <- glmer(
   choice ~ target*group*block + reward*effort + school +
     (1 + block | ppn),
   data = df_long, family = binomial, control = ctrl
@@ -72,219 +91,270 @@ m_full <- glmer(
 
 # Compare models
 
-print(anova(m1_simpler, m_full, test = "Chisq")) # full model is better
-isSingular(m_full)
-print(VarCorr(m_full))
+anova(m1_without_class, m_rslopes)
 
+# Check for singularity
 
-# Step 3: test the 3-way interaction
-
-m_no_3way <- glmer(
-  choice ~ target + group + block + 
-    target:group + target:block + group:block +  # all 2-way interactions
-    reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, family = binomial, control = ctrl
-)
-
-anova(m_no_3way, m_full, test = "Chisq") # model without 3way is better but we retain full model given RQ1
-
-
-# Choose final model 
-final_model <- m_full
-
-summary(final_model)
-
-# Compare with a baseline model
-anova(m0, final_model, test = "Chisq")
-
+print(VarCorr(m_rslopes))
 
 
 
 ```
 
+Decision: Adding random slopes for block significantly improves the model fit This indicates that participants differ substantially in how their choices evolve across blocks.
 
-## Model Summary and Odds Ratios
+### Step 3: Test 3-way interaction (Target $\times$ Group $\times$ Block)
 
 ```{r}
 
+# Full model with three-way interaction
+m_full <- glmer(
+  choice ~ target * group * block + reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial, 
+  control = ctrl
+)
+
+# Model without three-way interaction (only two-way)
+m_no_3way <- glmer(
+  choice ~ target + group + block + 
+    target:group + target:block + group:block +  
+    reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial, 
+  control = ctrl
+)
+
+
+
+# Compare models
+anova(m_no_3way, m_full)
+
+```
+
+### Final Model Selection for RQ1
+
+The 3-way interaction is not significant, but given that the research question requires directly testing this hypothesis, we retain the full model.
+
+```{r}
+
+final_model <- m_full
+
+# Check singularity
+isSingular(final_model)
+
+# Print variance components
+
+print(VarCorr(final_model))
+
+# Compare with baseline
+
+print(anova(m0, final_model))
+
+
+```
+
+## 2. Model Summary and Effect Sizes
+
+```{r}
+
+# Model summary
 
 print(summary(final_model))
 
-# Overall model fit
+# Odds Ratios with 95% CIs
 
-print(anova(m0, final_model, test = "Chisq"))
-
-# Odds ratio with 95% CIs
+# Extract coefficients and SEs
+log_odds <- lme4::fixef(final_model)
 se <- sqrt(diag(vcov(final_model)))
 
-log_odds <- fixef(final_model)
-tab <- data.frame(
+# Calculate ORs and CIs
+or_table <- data.frame(
+  Predictor = names(log_odds),
   OR = exp(log_odds),
-  se = se,
-  LL = exp(log_odds - 1.96 * se),
-  UL = exp(log_odds + 1.96 * se)
+  SE = se,
+  CI_Lower = exp(log_odds - 1.96 * se),
+  CI_Upper = exp(log_odds + 1.96 * se),
+  p_value = summary(final_model)$coefficients[, "Pr(>|z|)"]
 )
-print(round(tab, 2))
-
-round(data.frame(se),2)
 
 
- 
-coefs <- summary(final_model)$ coefficients[, "Estimate"]
-std.err <- summary(final_model)$ coefficients[, "Std. Error"]
-nams <- rownames(summary(final_model)$ coefficients)
+
+# Round for display
+or_table_display <- or_table
+or_table_display[, c("OR", "SE", "CI_Lower", "CI_Upper")] <- 
+  round(or_table_display[, c("OR", "SE", "CI_Lower", "CI_Upper")], 3)
+or_table_display$p_value <- round(or_table_display$p_value, 4)
+
+print(or_table_display)
 
 
 
 ```
 
-
-## 2. Post-hoc Analyses 
-
-
-
-### 1. Reward $\times$ Effort interaction
-
+## 3. Model Performance Metrics
 
 ```{r}
 
-# dir.create("figures/regression-plots", recursive = TRUE, showWarnings = FALSE)
+# ICC
+icc_val <- performance::icc(final_model)
+round(icc_val$ICC_adjusted, 3)
 
-# 1. Predicted probabilities 
+# R-squared
+r2_vals <- performance::r2(final_model)
+round(r2_vals$R2_marginal, 3)
+round(r2_vals$R2_conditional, 3)
 
-# Predictions for all reward × effort combinations
+```
+
+## 4. Post-hoc Analyses
+
+### 4. 1. Reward $\times$ Effort interaction
+
+```{r}
+
+#  Predicted probabilities 
+
+emm_re <- emmeans(final_model, ~ reward * effort, type = "response")
+
+# Simple slopes: Effect of effort at each reward level
+contrast(emm_re, "pairwise", by = "reward", adjust = "holm")
+
+# Simple slopes: Effect of reward at each effort level
+contrast(emm_re, "pairwise", by = "effort", adjust = "holm")
+
+# Visualization
+
 gg_re <- ggpredict(final_model, terms = c("reward", "effort"))
-gg_re
 
-
-# visualization
-
-int_1 <- plot(gg_re) +
+plot_re <- plot(gg_re) +
   labs(
     title = "Predicted Probability of High-Effort Choice",
     y = "P(High-Effort Choice)",
     x = "Reward (points)"
-  )
+  ) +
+  theme_bw() +
+  scale_y_continuous(limits = c(1, 0))
 
 
-ggsave("figures/regression-plots/int_1.png",  
-       plot = int_1,
+ggsave("figures/regression-plots/reward_effort_interaction.png",  
+       plot = plot_re,
        width = 7, height = 5, dpi = 300)
 
 
-# 2. Pairwise comparisons
-
-emm_re <- emmeans(final_model, ~ reward * effort, type = "response")
-
-# Reward effects within each effort level
-contrast(emm_re, "pairwise", by = "effort", adjust = "holm")
-
-# Effort effects within each reward level
-contrast(emm_re, "pairwise", by = "reward", adjust = "holm")
 
 
 ```
 
-
-
-### 2. Target $\times$ Group interaction
-
+### 4. 2. Target $\times$ Group interaction (Exploratory)
 
 ```{r}
 
-# 1. Predicted probabilities
 
-gg_tg <- ggpredict(final_model, terms = c("target", "group"))
-gg_tg
-
-# visualization
-
-int_2 <- plot(gg_tg) +
-  labs(
-    title = "Predicted Probability of High-Effort Choice",
-    y = "P(High-Effort Choice)",
-    x = "Social Target"
-  )
-
-
-ggsave("figures/regression-plots/int_2.png",  
-       plot = int_2,
-       width = 7, height = 5, dpi = 300)
-
-# 2. Pairwise comparisons 
-
+# Estimated marginal means
 emm_tg <- emmeans(final_model, ~ target * group, type = "response")
 
-# Target differences within each group
+
+# Simple effects: Target differences within each group
+
 contrast(emm_tg, "pairwise", by = "group", adjust = "holm")
 
-# Group differences within each target
+# Simple effects: Group differences within each target
+
 contrast(emm_tg, "pairwise", by = "target", adjust = "holm")
 
+# Visualization
 
+gg_tg <- ggpredict(final_model, terms = c("target", "group"))
 
-```
-
-
-### 3. Block × Group × Target: Difference-in-Differences Analysis
-
-```{r}
-
-# 1. Predicted probabilities
-
-gg_tgb <- ggpredict(m_full, terms = c("target", "group", "block"))
-gg_tgb
-
-
-# visualization
-int_3 <- plot(gg_tgb) +
+plot_tg <- plot(gg_tg) +
   labs(
-    title = "Predicted Probability of High-Effort Choice",
-    y = "P(High-Effort Choice)",
-    x = "Block"
-  )
+    title = "Target × Group Interaction (Exploratory)",
+    subtitle = "Differential effects across targets, particularly for prosocial",
+    y = "Predicted P(High-Effort Choice)",
+    x = "Social Target",
+    color = "Group"
+  ) +
+  theme_bw() +
+  scale_y_continuous(limits = c(1, 0))
 
-
-
-ggsave("figures/regression-plots/int_3.png",  
-       plot = int_3,
+ggsave("figures/regression-plots/target_group_interaction.png",  
+       plot = plot_tg,
        width = 7, height = 5, dpi = 300)
 
 
 
-# Difference in differences 
-emm_tgb <- emmeans(m_full, ~ target * group * block, type = "response")
 
-# Pre → Post change within target × group
-prepost_tgb <- contrast(
-  emm_tgb,
-  method = "revpairwise",
-  by = c("target", "group"),
-  type = "response"
+```
+
+### 4. 3. Block × Group × Target: Primary Hypothesis - NULL finding
+
+```{r}
+
+# Estimated marginal means for full three-way
+emm_full <- emmeans(final_model, ~ target * group * block,
+                    type = "response")
+
+
+
+# Pre-to-post changes within each Target × Group combination
+ 
+prepost <- contrast(
+  emm_full,
+  method = "pairwise",
+  by = c("target", "group")
 )
 
-# DID: Compare pre-post changes across groups (within each target)
-did_by_target <- contrast(
-  emm_tgb,
-  interaction = c("pairwise", "revpairwise"),
+print(as.data.frame(prepost))
+
+# Difference-in-differences: Compare change scores across groups
+
+did <- contrast(
+  emm_full,
+  interaction = c("pairwise", "pairwise"),
   by = "target",
-  adjust = "holm",
-  type = "response"
+  adjust = "holm"
 )
+print(as.data.frame(did))
 
-# Convert to table for reporting
-did_summary <- as.data.frame(did_by_target)
-print(did_summary)
+# Visualization showing ceiling effect
+
+gg_3way <- ggpredict(final_model, terms = c("block", "group", "target"))
+
+plot_3way <- plot(gg_3way) +
+  labs(
+    title = "Target × Group × Block: Primary Hypothesis Test",
+    subtitle = "No differential effects detected (ceiling effects prevent detection)",
+    y = "Predicted P(High-Effort Choice)",
+    x = "Block",
+    color = "Group"
+  ) +
+  facet_wrap(~ facet, ncol = 3) +
+  theme_bw() +
+  scale_y_continuous(limits = c(0.85, 1.0)) +  # Show the ceiling
+  geom_hline(yintercept = 0.92, linetype = "dashed", color = "red", alpha = 0.5) +
+  annotate("text", x = 1.5, y = 0.86, 
+           label = "Red line = observed mean (92.4%)", 
+           size = 3, color = "red")
+
+
+
+ggsave("figures/regression-plots/three_way_interaction_primary_hypothesis.png",  
+       plot = plot_3way,
+       width = 7, height = 5, dpi = 300)
+
+
 
 
 ```
 
-### Diagnostics (final_model)
+## 5. Final Model Diagnostics
 
 ```{r}
 
-# 1. Simulate DHARMa residuals
+#  Simulate DHARMa residuals
 
 sim <- simulateResiduals(
   fittedModel = final_model,
@@ -293,30 +363,33 @@ sim <- simulateResiduals(
 )
 
 
-# 2. Main diagnostic plots
+# Main diagnostic plots
 
 plot(sim) # QQ + residuals vs fitted
 
 plotQQunif(sim)  # QQ only
 plotResiduals(sim) # residuals vs predicted only
 
-# 3. Global statistical tests
+# Statistical tests
 
 testUniformity(sim)      # Should be non-significant
 testDispersion(sim)      # Should be non-significant
 testOutliers(sim)     # OK if significant for GLMMs, consider type="bootstrap" if significant
 
-# 4. Predictor-specific residual checks
+# Predictor-specific residual checks
 
 mf <- model.frame(final_model) # because of NA values 
 
 
-plotResiduals(sim, mf$target)
-plotResiduals(sim, mf$group)
-plotResiduals(sim, mf$block)
+plotResiduals(sim, mf$target, main = "Residuals vs. Target")
+plotResiduals(sim, mf$group, main = "Residuals vs. Group")
+plotResiduals(sim, mf$block, main = "Residuals vs. Block")
+plotResiduals(sim, mf$reward, main = "Residuals vs. Reward")
+plotResiduals(sim, mf$effort, main = "Residuals vs. Effort")
+plotResiduals(sim, mf$school, main = "Residuals vs. School")
 
 
-# 5. Grouped residuals (random-effects diagnostic)
+# Grouped residuals (random-effects diagnostic)
 sim_ppn <- recalculateResiduals(sim, group = mf$ppn)
 plot(sim_ppn)
 testDispersion(sim_ppn)
@@ -326,18 +399,13 @@ performance::icc(final_model)
 
 performance::r2(final_model)
 
-r2_nakagawa(final_model)
 
 ```
 
+### Save Plots for report
 
 ```{r}
 # Save plots
-
-getwd()
-
-# dir.create("figures/diagnostics", recursive = TRUE, showWarnings = FALSE)
-
 
 w <- 7
 h <- 5
@@ -363,233 +431,188 @@ dev.off()
 
 ```
 
-
 ## Research Question 2: Moderation Analysis
 
 Are these effects moderated by (a) individual social susceptibility and (b) classroom cohesion?
 
-### Social Susceptibility Moderation
+Note: the following analyses make use of \texttt{glmmTMB} due to the complexity of the models.
+
+We first verify if lme4 and glmmTMB produce equivalent results
 
 ```{r}
+# Fit baseline model in glmmTMB
+baseline_glmmTMB <- glmmTMB(
+  choice ~ target * group * block + reward * effort + 
+                             school +
+                             (1 + block | ppn),
+                            data = df_long,
+                            family = binomial
+                            )
 
-# 1. Test whether susceptibility moderates the Group×Block×Target interaction
+summary(baseline_glmmTMB)
+# summary(final_model) # Models are identical
 
-m_suscept_full <- glmmTMB(
+```
+
+### Social Susceptibility Moderation (H4)
+
+
+```{r}
+# Model 2a: Base model with susceptibility main effect only
+m_suscept_2a <- glmmTMB(
+  choice ~ target * group * block + susceptibility_c + 
+           reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+)
+
+# Model 2b: Add Group × Block × Susceptibility
+
+
+m_suscept_2b <- glmmTMB(
+  choice ~ target * group * block + 
+           group * block * susceptibility_c + 
+           reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+)
+
+
+# Model 2c: Add three-way interactions with target
+
+
+m_suscept_2c <- glmmTMB(
+  choice ~ (group * block * target) + 
+           (group * block * susceptibility_c) +
+           (group * target * susceptibility_c) + 
+           (block * target * susceptibility_c) +
+           reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+  )
+  
+
+# Model 2d: Full four-way interaction
+
+m_suscept_2d <- glmmTMB(
   choice ~ group * block * target * susceptibility_c + 
            reward * effort + school +
     (1 + block | ppn),
   data = df_long, 
   family = binomial
 )
-
-summary(m_suscept_full)
-
-# 2, Compare models 
-
-# Model without four-way interaction (all three-ways included)
-m_suscept_3way <- glmmTMB(
-  choice ~ (group * block * target) + (group * block * susceptibility_c) +
-           (group * target * susceptibility_c) + (block * target * susceptibility_c) +
-           reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-# Model with only susceptibility × group × block 
-m_suscept_simpler <- glmmTMB(
-  choice ~ group * block * susceptibility_c + target + 
-           target:group + target:block +  # Allow target effects but not moderated by susceptibility
-           reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-# Base model: susceptibility main effect only
-m_suscept_base <- glmmTMB(
-  choice ~ group * block * target + susceptibility_c + 
-           reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-# Compare models
-print(anova(m_suscept_base, m_suscept_simpler, m_suscept_3way, m_suscept_full, test = "Chisq"))
-
-
-```
-
-
-### Classroom Cohesion Moderation
-
-Since cohesion is aggregated, we need the random intercept for class in these models
-
-```{r}
-
-# Full model with four-way interaction + class random effect
-m_cohesion_full_class <- glmmTMB(
-  choice ~ group * block * target * cohesion_c + 
-    reward * effort + school +
-    (1 + block | ppn) + (1 | class),
-  data = df_long, 
-  family = binomial
-)
-
-# Check if class random effect is needed
-m_cohesion_full_noclass <- glmmTMB(
-  choice ~ group * block * target * cohesion_c + 
-    reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-print(anova(m_cohesion_full_noclass, m_cohesion_full_class, test = "Chisq"))
-
-
-# Model with only cohesion × group × block
-m_cohesion_simpler_class <- glmmTMB(
-  choice ~ group * block * cohesion_c + target + 
-    target:group + target:block +
-    reward * effort + school +
-    (1 + block | ppn) + (1 | class),
-  data = df_long, 
-  family = binomial
-)
-
-# Base model: cohesion main effect only
-m_cohesion_base_class <- glmmTMB(
-  choice ~ group * block * target + cohesion_c + 
-    reward * effort + school +
-    (1 + block | ppn) + (1 | class),
-  data = df_long, 
-  family = binomial
-)
-
-# Compare models
-
-print(anova(m_cohesion_base_class, 
-            m_cohesion_simpler_class, 
-            m_cohesion_full_class, test = "Chisq"))
-
   
+
+# Compare models
+print(anova(m_suscept_2a, m_suscept_2b, m_suscept_2c, m_suscept_2d))
+
+m_suscept_final <- m_suscept_2b
+
 ```
 
-### Post-hoc analyses
+Decision: Best fitting model is 2b.
+
+
+### Model Summary
+
+```{r}
+print(summary(m_suscept_final))
+
+# Extract key coefficients
+
+suscept_coefs <- summary(m_suscept_final)$coefficients$cond
+suscept_rows <- grep("susceptibility", rownames(suscept_coefs), ignore.case = TRUE)
+
+
+
+
+print(round(suscept_coefs[suscept_rows, ],4))
+
+sjPlot::tab_model(m_suscept_2b)
+
+
+```
+
+
+### Classroom Cohesion Moderation (H5)
+
+Due to model instability, cohesion is standardized below.
 
 ```{r}
 
-pred <- ggpredict(
-  m_suscept_simpler,
-  terms = c("group", "susceptibility_c [-1, 0, 1]")
+df_long$cohesion_z <- scale(df_long$cohesion_directed)[, 1]
+
+m_cohesion_test_no_class <- glmmTMB(
+  choice ~ target * group * block + cohesion_z + 
+           reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
 )
 
-model2_plot1 <- plot(pred) +
-  ggplot2::theme_bw() +
-  ggplot2::labs(
-    x = "Group",
-    y = "Predicted probability of choice",
-    color = "Susceptibility (SD)"
+m_cohesion_test_with_class <- glmmTMB(
+  choice ~ target * group * block + cohesion_z  + 
+           reward * effort + school +
+    (1 + block | ppn) + (1 | class),
+  data = df_long, 
+  family = binomial
+)
+
+print(anova(m_cohesion_test_no_class, m_cohesion_test_with_class))
+
+
+# Model 3a: Base model with cohesion main effect
+
+m_cohesion_3a <- glmmTMB(
+  choice ~ target * group * block + cohesion_z 
+  + reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
+  )
+
+# Model 3b: Add Group × Block × Cohesion
+
+m_cohesion_3b <- glmmTMB(
+    choice ~ target * group * block + 
+             group * block * cohesion_z + 
+             reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
+  )
+
+# Model 3c: Add three-way interactions with target
+
+m_cohesion_3c <- glmmTMB(
+    choice ~ (group * block * target) + 
+             (group * block * cohesion_z) +
+             (group * target * cohesion_z) + 
+             (block * target * cohesion_z) +
+             reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
+  )
+
+# Model 3d: Full four-way interaction
+
+m_cohesion_3d <- glmmTMB(
+    choice ~ group * block * target * cohesion_z + 
+             reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
   )
 
 
-print(model2_plot1)
-
-```
-
-
-### Model Diagnostics
-
-```{r}
-# 1. Simulate DHARMa residuals
-
-sim2 <- simulateResiduals(
-  fittedModel = m_suscept_simpler,
-  n = 1000,
-  plot = FALSE
-)
-
-
-# 2. Main diagnostic plots
-
-plot(sim2) # QQ + residuals vs fitted
-
-plotQQunif(sim2)  # QQ only
-plotResiduals(sim2) # residuals vs predicted only
-
-# 3. Global statistical tests
-
-testUniformity(sim2)      # Should be non-significant
-testDispersion(sim2)      # Should be non-significant
-testOutliers(sim2)       # OK if significant for GLMMs, consider type="bootstrap" if significant
-
-# 4. Predictor-specific residual checks
-
-mf <- model.frame(m_suscept_simpler) # because of NA values 
-
-
-plotResiduals(sim2, mf$target)
-plotResiduals(sim2, mf$group)
-plotResiduals(sim2, mf$block)
-plotResiduals(sim2, mf$school)
-plotResiduals(sim2, mf$reward)
-plotResiduals(sim2, mf$effort)
-
-
-# 5. Grouped residuals (random-effects diagnostic)
-sim_ppn2 <- recalculateResiduals(sim2, group = mf$ppn)
-plot(sim_ppn2)
-testDispersion(sim_ppn2)
-
-
-performance::icc(m_suscept_simpler)
-
-performance::r2(m_suscept_simpler)
-
-r2_nakagawa(m_suscept_simpler)
+print(anova(m_cohesion_3a, m_cohesion_3b, m_cohesion_3c, m_cohesion_3d))
 
 
 ```
 
-
-
-
-# Plots 
-
-```{r}
-
-group_labels <- c(
-  "control"       = "Control Group",
-  "positive_norm" = "Positive Norm",
-  "negative_norm" = "Negative Norm"
-)
-
-y <- predict_response(
-  final_model,
-  terms = c("block", "group", "target")
-)
-
-y$group <- dplyr::recode(
-  y$group,
-  !!!group_labels
-)
-
-
-plot_model1 <- plot(y) +
-  scale_y_continuous(limits = c(0, 1))
-
-
-# Plot interaction
-
-ggsave("figures/regression-plots/plot_model1.png",  
-       plot = plot_model1,
-       width = 7, height = 5, dpi = 300)
-
-
-
-
-
-```
+Decision: The best fitting model if m_cohesion_3c
 
