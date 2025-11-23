@@ -364,10 +364,6 @@ dev.off()
 ```
 
 
-
-
-
-
 ## Research Question 2: Moderation Analysis
 
 Are these effects moderated by (a) individual social susceptibility and (b) classroom cohesion?

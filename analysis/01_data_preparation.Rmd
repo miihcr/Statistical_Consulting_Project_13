@@ -30,7 +30,13 @@ df_wide <- df_wide |>
     class = as.factor(class),
     group = factor(group, levels = c(1, 2, 3),
                    labels = c("positive_norm", "negative_norm", "control"))
-  )
+  ) |>  # we can also combine schools
+  mutate(
+    #
+    school_combined = case_when(
+      school %in% c("1_loc1", "1_loc2") ~ "School_1",
+      school == "2" ~ "School_2"
+    ))
 
 
 # --- 5. Identify trial columns ---
@@ -74,7 +80,6 @@ df_long <- df_wide |>
                     labels = c("40%", "90%")),
     reward = factor(reward_num, levels = c(2, 6, 10),
                     labels = c("2 points", "6 points", "10 points")),
-
     choice = case_when(
       choice_raw == 1 ~ 1L,  # high-effort choice
       choice_raw == 2 ~ 0L,  # low-effort choice
@@ -88,7 +93,7 @@ df_long <- df_wide |>
     effort = relevel(effort, ref = "40%"),
     block = relevel(block, ref = "pre")
   ) |> 
-  select(ppn, school, class, group,
+  select(ppn, school, school_combined, class, group,
          trial = trial_clean, block, target, 
          reward, effort, choice,
          susceptibility, susceptibility_c,
@@ -96,6 +101,9 @@ df_long <- df_wide |>
          cohesion_recip, cohesion_recip_c,
          ) 
  
+
+
+
 # --- 7. Checks ---
 # Check structure
 glimpse(df_long)
