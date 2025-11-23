@@ -167,6 +167,11 @@ fit_table(fit1)
 fit_table(fit2)
 
 
+interpret(fit1)
+interpret(fit2)
+
+
+
 ```
 
 CFA indicates that 2-factor model is significantly better (chi-sq difference test), however the the latent variables are highly correlated (std.lv), therefore it might not make sense to use two

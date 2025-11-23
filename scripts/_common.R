@@ -1,7 +1,7 @@
 # ---- packages ----
 pkgs <- c(
   "dplyr", "tidyr", "stringr", "ggplot2", "here", "readr",
-  "ggthemes", "glmmTMB",
+  "ggthemes", "glmmTMB", "effectsize",
   "lme4", "lmerTest", "emmeans", "car", "ggeffects", "DHARMa", "performance",
   "igraph", "lavaan", "purrr", "psych", "knitr",
   "mice", "VIM", "naniar", "gtsummary"
