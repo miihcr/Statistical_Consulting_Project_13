@@ -32,13 +32,6 @@ df_wide <- df_wide |>
                    labels = c("positive_norm", "negative_norm", "control"))
   )
 
-# Center new susceptibility and cohesion
-df_wide <- df_wide |>
-  mutate(susceptibility_c = susceptibility - mean(susceptibility, na.rm = TRUE))
-
-df_wide <- df_wide |>
-  mutate(cohesion_c = cohesion - mean(cohesion, na.rm = TRUE))
-
 
 # --- 5. Identify trial columns ---
 # Pattern matches trial names like: "1_SELF_2easy40" or "X2_CLIMATE_10hard90"
@@ -49,8 +42,10 @@ df_wide <- df_wide |>
 # (easy|hard) = difficulty label (not extracted but part of pattern)
 # (40|90) = effort level
 
+
 trial_pattern <- "^(X)?[12]_(SELF|CLIMATE|OTHERS)_(2|6|10)(easy|hard)(40|90)$"
-trial_cols <- names(select(df_wide, matches(trial_pattern)))
+
+trial_cols <- names(dplyr::select(df_wide, matches(trial_pattern)))
 
 # --- 6. Reshape to long format ---
 df_long <- df_wide |>
@@ -79,7 +74,6 @@ df_long <- df_wide |>
                     labels = c("40%", "90%")),
     reward = factor(reward_num, levels = c(2, 6, 10),
                     labels = c("2 points", "6 points", "10 points")),
-   reward_num_c = as.numeric(scale(reward_num, scale = FALSE)),
 
     choice = case_when(
       choice_raw == 1 ~ 1L,  # high-effort choice
@@ -95,9 +89,12 @@ df_long <- df_wide |>
     block = relevel(block, ref = "pre")
   ) |> 
   select(ppn, school, class, group,
-         trial = trial_clean, block, target, reward, reward_num,
-         reward_num_c, effort, choice,
-         susceptibility, susceptibility_c, cohesion, cohesion_c) 
+         trial = trial_clean, block, target, 
+         reward, effort, choice,
+         susceptibility, susceptibility_c,
+         cohesion_directed, cohesion_directed_c,
+         cohesion_recip, cohesion_recip_c,
+         ) 
  
 # --- 7. Checks ---
 # Check structure

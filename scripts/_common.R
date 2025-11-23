@@ -7,20 +7,38 @@ pkgs <- c(
   "mice", "VIM", "naniar", "gtsummary"
 )
 
-# Install package if not there
+# Load packages (stop if missing)
 for (pkg in pkgs) {
   if (!require(pkg, character.only = TRUE, quietly = TRUE)) {
-    stop(paste0("Package '", pkg, "' is not installed. Please install it with: install.packages('", pkg, "')"))
+    stop(paste0("Package '", pkg, "' is not installed. Install it with: install.packages('", pkg, "')"))
   }
 }
 
-# ---- knitr & ggplot defaults (safe to call from Rmds) ----
+# ---- fix masking (MASS, car, psych) ----
+# Re-load dplyr last so its functions override others
+library(dplyr)
+library(tidyselect)
+
+# force dplyr / tidyselect versions for safety
+select      <- dplyr::select
+filter      <- dplyr::filter
+mutate      <- dplyr::mutate
+rename      <- dplyr::rename
+arrange     <- dplyr::arrange
+
+matches     <- tidyselect::matches
+starts_with <- tidyselect::starts_with
+ends_with   <- tidyselect::ends_with
+contains    <- tidyselect::contains
+
+# ---- knitr & ggplot ----
 if (requireNamespace("knitr", quietly = TRUE)) {
   knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 }
+
 theme_set(ggplot2::theme_minimal())
 
-# ---- paths & data loader ----
+# ---- paths & data loading ----
 dir.create(here::here("data","processed"), recursive = TRUE, showWarnings = FALSE)
 
 load_processed <- function() {
@@ -32,21 +50,8 @@ load_processed <- function() {
   )
 }
 
-# Scripts are called when needed
 load_processed_data <- function(assign_global = FALSE) {
-  fw <- here::here("data","processed","df_wide.rds")
-  fl <- here::here("data","processed","df_long.rds")
-  
-  data_list <- list(
-    df_wide = if (file.exists(fw)) readRDS(fw) else NULL,
-    df_long = if (file.exists(fl)) readRDS(fl) else NULL
-  )
-  
-  if (assign_global) {
-    list2env(data_list, envir = .GlobalEnv)
-  }
-  
+  data_list <- load_processed()
+  if (assign_global) list2env(data_list, envir = .GlobalEnv)
   invisible(data_list)
 }
-
-
