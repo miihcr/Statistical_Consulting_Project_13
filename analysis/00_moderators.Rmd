@@ -35,10 +35,6 @@ all_items = c("SUS_1", "SUS_2", "SUS_3", "SUS_4",
 
 sus_scores = data[, grep("SUS_", names(data))]
 
-alpha(sus_scores)$total$raw_alpha # cronbachs alpha for total score
-
-omega(sus_scores)$omega.tot # omega for total score 
-
 ```
 
 ### Reliability analysis (internal consistency)
@@ -46,18 +42,21 @@ omega(sus_scores)$omega.tot # omega for total score
 #### Two factors
 
 ```{r}
-social_anxiety_rel = psych::alpha(sus_scores[social_anxiety_items], check.keys = FALSE)
+social_anxiety_rel = alpha(sus_scores[social_anxiety_items], check.keys = FALSE)
 alpha_value1 = social_anxiety_rel$total$raw_alpha 
 alpha_value1
 
+omega(sus_scores[social_anxiety_items])$omega.tot
 ```
 
 The internal consistency of the Social Anxiety scale: Cronbach’s alpha = `r round(alpha_value1, 3)`
 
 ```{r}
-self_esteem_rel = psych::alpha(sus_scores[peers_self_esteem_items], check.keys = FALSE)
+self_esteem_rel = alpha(sus_scores[peers_self_esteem_items], check.keys = FALSE)
 alpha_value2 = self_esteem_rel$total$raw_alpha
 alpha_value2
+
+omega(sus_scores[peers_self_esteem_items])$omega.tot
 ```
 
 The internal consistency of the Self Esteem scale: Cronbach’s alpha = `r round(alpha_value2, 3)`
@@ -67,58 +66,15 @@ Seems like a good fit, test all item reliability.
 #### One factor
 
 ```{r}
-all_items_rel = psych::alpha(sus_scores[all_items], check.keys = FALSE)
-alpha_value3 = all_items_rel$total$raw_alpha
+
+all_items_rel = alpha(sus_scores[all_items], check.keys = FALSE)
+alpha_value3 = all_items_rel$total$raw_alpha # cronbachs alpha for total score
 alpha_value3
+
+omega(sus_scores)$omega.tot # omega for total score 
 ```
 
 Also a good fit, might make sense to combine all of them together. The internal consistency of the all items: Cronbach’s alpha = `r round(alpha_value3, 3)`
-
-comment: I suggest we removed the EFA analysis
-
-### EFA
-
-```{r}
-fa.parallel(sus_scores[all_items], fa = "fa")
-```
-
-Parallel analysis shows that using two factors is better factor is possible.
-
-### One factor
-
-```{r}
-efa_1_factor = fa(sus_scores[all_items], nfactors = 1, rotate = "oblimin")
-variance_explained1 = efa_1_factor$Vaccounted["Proportion Var", 1]
-efa_1_factor$loadings
-
-```
-
-### Two factors
-
-```{r}
-efa_2_factor = fa(sus_scores[all_items], nfactors = 2, rotate = "oblimin")
-
-var_factor1 = efa_2_factor$Vaccounted["Proportion Var", 1]
-var_factor2 = efa_2_factor$Vaccounted["Proportion Var", 2]
-total_var = efa_2_factor$Vaccounted["Cumulative Var", 2]
-
-# Convert loadings to a proper numeric data frame
-loadings_df <- as.data.frame(unclass(efa_2_factor$loadings))
-
-# Assign each item to the factor with the highest absolute loading
-loadings_df$main_factor <- apply(loadings_df[, 1:2], 1, function(x) {
-  ifelse(abs(x[1]) > abs(x[2]), "Factor1", "Factor2")
-})
-
-# Store the main loading value
-loadings_df$main_loading <- apply(loadings_df[, 1:2], 1, function(x) max(abs(x)))
-
-var_factor1; var_factor2; total_var
-loadings_df
-
-```
-
-We see that 2 factors are also plausible, but second factor does not fit SUS 2,4,6,8. Only SUS 2 and barely SUS 4.
 
 ### CFA
 
@@ -136,9 +92,6 @@ cfa_2f <- "
   PeerEsteem    =~ SUS_2 + SUS_4 + SUS_6 + SUS_8
 "
 
-# fit_1f = cfa(cfa_1f, data = sus_scores)
-# fit_2f = cfa(cfa_2f, data = sus_scores)
-
 fit1 <- cfa(
 cfa_1f,
 data = sus_scores,
@@ -155,24 +108,22 @@ missing = "fiml"
 )
 
 
-
 summary(fit1, fit.measures = TRUE, standardized = TRUE)
 summary(fit2, fit.measures = TRUE, standardized = TRUE)
 
 
 # Fit measures
-
 fit_table(fit1)
-
 fit_table(fit2)
 
 
 interpret(fit1)
 interpret(fit2)
 
+```
+
+```{r}
 # Removing item 2
-
-
 cfa_minus2 <- '
   SocialSusceptibility =~ SUS_1 + SUS_3 + SUS_4 + SUS_5 + SUS_6 + SUS_7 + SUS_8
 '
@@ -187,7 +138,26 @@ fit_minus2 <- cfa(
 interpret(fit_minus2)
 
 summary(fit_minus2, fit.measures = TRUE, standardized = TRUE)
+fit_table(fit_minus2)
+```
 
+```{r}
+# Removing item 4
+cfa_minus4 <- '
+  SocialSusceptibility =~ SUS_1 + SUS_3 + SUS_2 + SUS_5 + SUS_6 + SUS_7 + SUS_8
+'
+
+fit_minus4 <- cfa(
+  cfa_minus4,
+  data    = sus_scores,
+  std.lv  = TRUE,
+  missing = "fiml"
+)
+
+interpret(fit_minus4)
+
+summary(fit_minus4, fit.measures = TRUE, standardized = TRUE)
+fit_table(fit_minus4)
 ```
 
 CFA indicates that 2-factor model is significantly better (chi-sq difference test), however the the latent variables are highly correlated (std.lv), therefore it might not make sense to use two
@@ -233,7 +203,6 @@ dev.off()
 
 ```
 
-
 ## Social Cohesion
 
 ```{r}
@@ -249,7 +218,7 @@ data_sn$nom_like = strsplit((data_sn$nom_like), ",")
 
 ```{r}
 # Expand to long format
-edges = tidyr::unnest(data_sn, cols = c(nom_like))
+edges = unnest(data_sn, cols = c(nom_like))
 
 # Clean up whitespace and remove NA
 edges$nom_like = str_trim(edges$nom_like)
@@ -340,8 +309,6 @@ for (cls in classes) {
   )
   
   # Compute network metrics
-
-  
   dens = round(edge_density(g, loops = FALSE),3) # directed density
   
   # Reciprocated ties density (undirected)
@@ -401,11 +368,6 @@ network_summary
 
 ```
 
-```{r}
-
-```
-
-
 ### Network descriptives
 
 Descriptives of each class to see how they compare against each other
@@ -422,13 +384,13 @@ data_sn$n_nominations = sapply(data_sn$nominations_clean, function(x) {
   if (all(is.na(x))) 0 else length(x)
 })
 
-
 # Create summary data frame
 class_summary = data.frame(
   class = classes,
   n_subjects = NA,
   total_nominations = NA,
-  mean_nominations = NA
+  mean_nominations = NA,
+  total_reciprocal_nomination = NA
 )
 
 # Loop through classes and compute descriptives
@@ -440,17 +402,37 @@ for (i in seq_along(classes)) {
   total_nominations = sum(sub_df$n_nominations, na.rm = TRUE)
   mean_nominations = mean(sub_df$n_nominations, na.rm = TRUE)
   
+  # Get reciprocal edge count from the already-created g_recip graph
+  edges_sub = subset(edges, class == cls)
+  nodes_sub = subset(nodes_extended, class == cls)
+  g = graph_from_data_frame(
+    d = edges_sub[, c("source", "target")],
+    vertices = nodes_sub,
+    directed = TRUE
+  )
+  g_recip = as.undirected(g, mode = "mutual")
+  total_reciprocal = ecount(g_recip)
+  
   class_summary[i, "n_subjects"] = n_subjects
   class_summary[i, "total_nominations"] = total_nominations
   class_summary[i, "mean_nominations"] = mean_nominations
+  class_summary[i, "total_reciprocal_nomination"] = total_reciprocal
 }
 
 # View results
 print(class_summary)
-
-
 ```
+
+```{r}
+network_overview = merge(class_summary, network_summary,
+                     by = "class",
+                     all = TRUE)
+  
+print(network_overview)
+```
+
 ### Adjusting original dataset
+
 ```{r}
 # Add new column: mean per row (ignore missing values)
 data$susceptibility = round(rowMeans(data[, all_items], na.rm = TRUE),2)
@@ -483,12 +465,9 @@ data$cohesion_directed_c = as.numeric(scale(data$cohesion_directed, center = TRU
 
 data$susceptibility_c = as.numeric(scale(data$susceptibility, center = TRUE, scale = FALSE))
 
-# RDS saves the factors etc 
+RDS saves the factors etc
 saveRDS(
   data,
   here::here("data","processed","data2_incl_moderation.rds")
 )
-
-
-
 ```
