@@ -2,7 +2,7 @@
 
 
 
-This repository contains the analysis pipeline for Statistical Consulting Project 13.
+This repository contains the analysis pipeline for Statistical Consulting Project 13 at Leiden University.
 
 
 ---
@@ -179,13 +179,6 @@ This will automatically perform:
 ## Authors
 
 Milena Costa and Klāvs Kalvenieks
-
-
-This repository was developed as part of:
-
-Statistical Consulting Project 13
-Faculty of Science, Leiden University
-
 
 ---
 
