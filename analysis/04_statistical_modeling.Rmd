@@ -191,6 +191,19 @@ or_table_display$p_value <- round(or_table_display$p_value, 4)
 print(or_table_display)
 
 
+# Model estimates plot
+theme_set(theme_sjplot())
+sjPlot::plot_model(m_full, 
+                   sort.est=T,
+                   vline.color = "red")
+
+
+ggsave("figures/regression-plots/model-estimates.png",
+       width = 7, height = 5, dpi = 300)
+
+
+
+
 
 ```
 
@@ -525,8 +538,6 @@ suscept_coefs <- summary(m_suscept_final)$coefficients$cond
 suscept_rows <- grep("susceptibility", rownames(suscept_coefs), ignore.case = TRUE)
 
 
-
-
 print(round(suscept_coefs[suscept_rows, ],4))
 
 sjPlot::tab_model(m_suscept_2b)
@@ -715,9 +726,28 @@ performance::icc(m_cohesion_3c)
 
 performance::r2(m_cohesion_3c)
 
+# Model estimates plots
+
+sjPlot::plot_model(m_suscept_2b, 
+                   sort.est=T,
+                   vline.color = "red")
+
+ggsave("figures/regression-plots/m-suscept-2b.png",
+       width = 7, height = 5, dpi = 300)
+
+sjPlot::plot_model(m_cohesion_3c, 
+                   sort.est=T,
+                   vline.color = "red")
+
+
+ggsave("figures/regression-plots/m-cohesion-3c.png",
+       width = 7, height = 5, dpi = 300)
+
+
+
 ```
 
-Decision: The best fitting model if m_cohesion_3c
+Decision: The best fitting model is m_cohesion_3c
 
 #### Reciprocal Density
 
