@@ -1,2 +1,37 @@
-".Rproj.user/" 
-.Rproj.user
+# R history files
+.Rhistory
+.Rapp.history
+
+# R data in workspace
+.RData
+.Ruserdata
+
+# RStudio files
+.Rproj.user/
+
+# macOS files
+.DS_Store
+
+# Windows files
+Thumbs.db
+
+# Temporary or lock files
+*~
+*.tmp
+~$*
+
+# renv (only ignore the library, keep renv.lock if using renv)
+renv/library/
+renv/staging/
+
+# knitr & Rmarkdown cache
+*_cache/
+cache/
+*.utf8.md
+*.knit.md
+
+# HTML or other knitted outputs (optional)
+*.html
+*.docx
+*.pdf
+
