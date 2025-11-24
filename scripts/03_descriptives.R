@@ -1,37 +1,32 @@
----
-title: "2_descriptives"
-author: "Milena Costa"
-date: "2025-11-04"
-output: pdf_document
----
+# 03_descriptives
 
-```{r setup, include=FALSE}
+# Descriptive statistics, ceiling effects, and main descriptive plots
 
-source(here::here("scripts","_common.R"), local = knitr::knit_global())
+
+# Load data
+
 
 df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
 df_long <- readRDS(here::here("data","processed","df_long.rds"))
 
 
-```
-
 
 # Helper functions
 
-```{r}
+
 
 # Color palettes consistent across plots
 
 pal_target <- c(
-"self"      = "#E15759",
-"climate"   = "#59A14F",
-"prosocial" = "#4E79A7"
+  "self"      = "#E15759",
+  "climate"   = "#59A14F",
+  "prosocial" = "#4E79A7"
 )
 
 pal_group <- c(
-"control"       = "#4E79A7",
-"positive_norm" = "#59A14F",
-"negative_norm" = "#E15759"
+  "control"       = "#4E79A7",
+  "positive_norm" = "#59A14F",
+  "negative_norm" = "#E15759"
 )
 
 
@@ -46,57 +41,17 @@ group_labels <- c(
 )
 
 
-```
+dir.create("figures/descriptives", recursive = TRUE, showWarnings = FALSE)
+
 
 # Descriptive Statistics
 
-## 1. Sample Characteristics
+## 1. Sample Characteristics: included in the rmd file if needed
 
-Currently we do not have demographic information, thus the r chunk below does not run. Should any of this information be available in the future, the following entries should be removed from the r chunk below.
-
-```{=latex}
-\begin{verbatim}
- include = FALSE, eval = FALSE
-\end{verbatim}
-```
-
-
-```{r, include = FALSE, eval = FALSE}
-
-# Basic demographics
-
-# Overall sample
-nrow(df_wide)  # Total N
-table(df_wide$gender)
-mean(df_wide$age, na.rm = TRUE)
-sd(df_wide$age, na.rm = TRUE)
-range(df_wide$age, na.rm = TRUE)
-
-# By school
-df_wide |> 
-  group_by(school) |> 
-  summarise(
-    n = n(),
-    mean_age = mean(age, na.rm = TRUE),
-    sd_age = sd(age, na.rm = TRUE)
-  )
-
-# By experimental group
-df_wide |> 
-  group_by(group) |> 
-  summarise(
-    n = n(),
-    mean_age = mean(age, na.rm = TRUE),
-    sd_age = sd(age, na.rm = TRUE),
-    n_female = sum(gender == "female", na.rm = TRUE),
-    pct_female = mean(gender == "female", na.rm = TRUE) * 100
-  )
-
-```
 
 ## 2. Primary Outcome: Choice Behaviour
 
-```{r}
+
 # Overall choice rates
 df_long |> 
   summarise(
@@ -143,12 +98,10 @@ df_long |>
   arrange(target, group, block)
 
 
-```
 
 
 ## 3. Task Controls: Reward and Effort
 
-```{r}
 
 # Choice rates by reward level
 df_long |> 
@@ -181,11 +134,11 @@ df_long |>
     .groups = "drop"
   )
 
-```
+
 
 ## 4. Moderator Variables
 
-```{r}
+
 
 sus_scores <- df_wide |> 
   select(starts_with("SUS_")) |>
@@ -206,11 +159,7 @@ describe(SUS_total) # descriptives for SUS
 hist(SUS_total)
 
 
-```
-
 ## 5. Ceiling Effects
-
-```{r}
 
 
 # By participant overall
@@ -279,7 +228,7 @@ plot_data <- participant_props |>
 threshold <- 0.90
 
 # 4. Plot
-ggplot(plot_data, aes(x = prop_disc, y = n)) +
+ceiling_plot  <- ggplot(plot_data, aes(x = prop_disc, y = n)) +
   geom_col(fill = "steelblue") +
   scale_x_continuous(
     breaks = plot_data$prop_disc,
@@ -306,11 +255,13 @@ ggplot(plot_data, aes(x = prop_disc, y = n)) +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-ggsave("figures/descriptives/figure1_ceiling_distribution.png", width = 7, 
+ggsave("figures/descriptives/figure1_ceiling_distribution.png", 
+       plot = ceiling_plot,
+       width = 7, 
        height = 5, dpi = 300)
 
 
-# Descriptives
+# Descriptive
 summary(participant_props$prop_high_effort)
 quantile(participant_props$prop_high_effort, probs = c(0.25, 0.5, 0.75))
 
@@ -389,14 +340,15 @@ ceiling_summary <- df_long |>
     pct_zero_var = mean(sd == 0, na.rm = TRUE) * 100
   )
 print(ceiling_summary)
-```
+
+
 
 
 # Visualizations
 
-a)  Reward $\times$ Effort interaction
+# a) Reward $\times$ Effort interaction
 
-```{r}
+
 
 plot_a_data <- df_long |> 
   group_by(reward, effort) |> 
@@ -426,11 +378,11 @@ ggsave("figures/descriptives/reward_effort_plot.png",
        width = 7, height = 5, dpi = 300)
 
 
-```
 
-b)  Target $\times$ Block $\times$ Group
 
-```{r}
+# b)  Target $\times$ Block $\times$ Group
+
+
 
 plot_b_data <- df_long |>
   group_by(group, block, target) |>
@@ -443,9 +395,9 @@ plot_b_data <- df_long |>
 
 target_block_group_plot <- plot_b_data |> 
   ggplot(aes(x = block,
-           y = p_choice,
-           color = target,
-           group = target)) +
+             y = p_choice,
+             color = target,
+             group = target)) +
   geom_point(size = 3) +
   geom_line(size = 1) +
   facet_wrap(~ group, labeller = labeller(group = group_labels)) +
@@ -494,4 +446,4 @@ zoomed_target_block_group_plot <- plot_b_data |>
 ggsave("figures/descriptives/zoomed_target_block_group_plot.png",
        width = 7, height = 5, dpi = 300)
 
-```
+message("Descriptives and plots created.")

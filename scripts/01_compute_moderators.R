@@ -1,30 +1,20 @@
----
-title: 'Research Question 2: Moderating Variables'
-author: "Klavs Kalvenieks"
-date: "2025-11-02"
-output: pdf_document
----
+# 01_compute_moderators.R
 
-```{r setup, include=FALSE}
-source(here::here("scripts","_common.R"), local = knitr::knit_global())
 
 # Function to extract key fit indices
 fit_table <- function(fit) {
-data.frame(
-ChiSq = fitMeasures(fit, "chisq"),
-df = fitMeasures(fit, "df"),
-CFI = fitMeasures(fit, "cfi"),
-TLI = fitMeasures(fit, "tli"),
-RMSEA = fitMeasures(fit, "rmsea"),
-SRMR = fitMeasures(fit, "srmr")
-)
+  data.frame(
+    ChiSq = fitMeasures(fit, "chisq"),
+    df = fitMeasures(fit, "df"),
+    CFI = fitMeasures(fit, "cfi"),
+    TLI = fitMeasures(fit, "tli"),
+    RMSEA = fitMeasures(fit, "rmsea"),
+    SRMR = fitMeasures(fit, "srmr")
+  )
 }
 
-```
+## --- Social susceptibility ---  ## 
 
-## Social susceptibility
-
-```{r}
 data <- read.csv(here::here("data","raw","data_2.csv"))
 
 # Calculate SUS scores and check reliability
@@ -35,50 +25,32 @@ all_items = c("SUS_1", "SUS_2", "SUS_3", "SUS_4",
 
 sus_scores = data[, grep("SUS_", names(data))]
 
-```
-
 ### Reliability analysis (internal consistency)
 
 #### Two factors
 
-```{r}
 social_anxiety_rel = alpha(sus_scores[social_anxiety_items], check.keys = FALSE)
 alpha_value1 = social_anxiety_rel$total$raw_alpha 
 alpha_value1
 
 omega(sus_scores[social_anxiety_items])$omega.tot
-```
 
-The internal consistency of the Social Anxiety scale: Cronbach’s alpha = `r round(alpha_value1, 3)`
-
-```{r}
 self_esteem_rel = alpha(sus_scores[peers_self_esteem_items], check.keys = FALSE)
 alpha_value2 = self_esteem_rel$total$raw_alpha
 alpha_value2
 
 omega(sus_scores[peers_self_esteem_items])$omega.tot
-```
-
-The internal consistency of the Self Esteem scale: Cronbach’s alpha = `r round(alpha_value2, 3)`
-
-Seems like a good fit, test all item reliability.
 
 #### One factor
-
-```{r}
 
 all_items_rel = alpha(sus_scores[all_items], check.keys = FALSE)
 alpha_value3 = all_items_rel$total$raw_alpha # cronbachs alpha for total score
 alpha_value3
 
 omega(sus_scores)$omega.tot # omega for total score 
-```
 
-Also a good fit, might make sense to combine all of them together. The internal consistency of the all items: Cronbach’s alpha = `r round(alpha_value3, 3)`
 
 ### CFA
-
-```{r}
 
 # 1-factor model
 
@@ -93,18 +65,18 @@ cfa_2f <- "
 "
 
 fit1 <- cfa(
-cfa_1f,
-data = sus_scores,
-std.lv = TRUE, # factor variances are set to 1 for identification
-missing = "fiml" # missing value handling
+  cfa_1f,
+  data = sus_scores,
+  std.lv = TRUE, # factor variances are set to 1 for identification
+  missing = "fiml" # missing value handling
 )
 
 
 fit2 <- cfa(
-cfa_2f,
-data = sus_scores,
-std.lv = TRUE,
-missing = "fiml"
+  cfa_2f,
+  data = sus_scores,
+  std.lv = TRUE,
+  missing = "fiml"
 )
 
 
@@ -120,9 +92,8 @@ fit_table(fit2)
 interpret(fit1)
 interpret(fit2)
 
-```
 
-```{r}
+
 # Removing item 2
 cfa_minus2 <- '
   SocialSusceptibility =~ SUS_1 + SUS_3 + SUS_4 + SUS_5 + SUS_6 + SUS_7 + SUS_8
@@ -139,9 +110,8 @@ interpret(fit_minus2)
 
 summary(fit_minus2, fit.measures = TRUE, standardized = TRUE)
 fit_table(fit_minus2)
-```
 
-```{r}
+
 # Removing item 4
 cfa_minus4 <- '
   SocialSusceptibility =~ SUS_1 + SUS_3 + SUS_2 + SUS_5 + SUS_6 + SUS_7 + SUS_8
@@ -158,17 +128,16 @@ interpret(fit_minus4)
 
 summary(fit_minus4, fit.measures = TRUE, standardized = TRUE)
 fit_table(fit_minus4)
-```
 
-CFA indicates that 2-factor model is significantly better (chi-sq difference test), however the the latent variables are highly correlated (std.lv), therefore it might not make sense to use two
 
 ## Visualizing CFA models
 
-```{r}
+dir.create("figures/sem-plots", recursive = TRUE, showWarnings = FALSE)
 
 
 # Visualize the measurement model
-png("figures/sem-plots/semplot_onefactor.png", width = 7, height = 5, res = 300,
+png("figures/sem-plots/semplot_onefactor.png", 
+    width = 7, height = 5, res = 300,
     units = "in")
 
 semPaths(fit1,         # name of fitted model object 
@@ -190,22 +159,20 @@ semPaths(fit2,
 
 dev.off()
 
-# Visualize the measurement model
-png("figures/sem-plots/semplot_minus2.png", width = 7, height = 5, res = 300,
-    units = "in")
+# Visualize 
+dir.create("figures/sem-plots", recursive = TRUE, showWarnings = FALSE)
 
-semPaths(fit_minus2,       
-         what="std",     
-         weighted=FALSE, 
-         nCharNodes=0)    
-
+png("figures/sem-plots/semplot_onefactor.png", 7, 5, units="in", res=300)
+semPaths(fit1, what="std", weighted=FALSE, nCharNodes=0)
 dev.off()
 
-```
+png("figures/sem-plots/semplot_twofactor.png", 7, 5, units="in", res=300)
+semPaths(fit2, what="std", weighted=FALSE, nCharNodes=0)
+dev.off()
 
-## Social Cohesion
 
-```{r}
+## --- Social Cohesion (Network) --- ##
+
 data$ppn = as.character(data$ppn)
 data$class = as.character(data$class)
 data$nom_like = as.character(data$nom_like)
@@ -214,9 +181,7 @@ data_sn = subset(data, select = c(ppn, school, class, nom_like))
 
 # Convert comma-separated nominations to list
 data_sn$nom_like = strsplit((data_sn$nom_like), ",")
-```
 
-```{r}
 # Expand to long format
 edges = unnest(data_sn, cols = c(nom_like))
 
@@ -231,13 +196,11 @@ colnames(nodes)[1] = "name"   # igraph expects "name" for node IDs
 # Rename for clarity
 colnames(edges)[colnames(edges) == "nom_like"] = "target"
 colnames(edges)[colnames(edges) == "ppn"] = "source"
-```
 
-Not all id's are present in dataset, but they have been nominated. Check which one have to be added
 
 ### Missing id's
 
-```{r}
+
 # Check per class for nominations not present in ppn
 classes = sort(unique(edges$class))
 
@@ -267,16 +230,14 @@ for (c in classes) {
     invalid_all = rbind(invalid_all, temp)
   }
 }
-```
 
-```{r}
 # Combine invalid nodes with the original node list
 nodes_extended = rbind(nodes, invalid_all)
-```
+
 
 ### Plots and metrics
 
-```{r}
+
 # Ensure plotting margins
 par(mar = c(1, 1, 2, 1))
 
@@ -354,7 +315,7 @@ for (cls in classes) {
     layout = layout_with_fr
   )
   
-    plot(
+  plot(
     g_recip,
     main = paste("Reciprocal Network for Class", cls),
     edge.width = 0.5,
@@ -366,13 +327,8 @@ for (cls in classes) {
 
 network_summary
 
-```
-
 ### Network descriptives
 
-Descriptives of each class to see how they compare against each other
-
-```{r}
 # Clean nominations column into numeric lists
 data_sn$nominations_clean = lapply(data_sn$nom_like, function(x) {
   if (is.null(x) || all(is.na(x))) return(NA)
@@ -421,19 +377,17 @@ for (i in seq_along(classes)) {
 
 # View results
 print(class_summary)
-```
 
-```{r}
 network_overview = merge(class_summary, network_summary,
-                     by = "class",
-                     all = TRUE)
-  
+                         by = "class",
+                         all = TRUE)
+
 print(network_overview)
-```
+
 
 ### Adjusting original dataset
 
-```{r}
+
 # Add new column: mean per row (ignore missing values)
 data$susceptibility = round(rowMeans(data[, all_items], na.rm = TRUE),2)
 
@@ -450,9 +404,9 @@ for (i in 1:nrow(data)) {
 
 # Add cohesion (density per class from network_summary)
 data = merge(data,
-              network_summary[, c("class", "density_directed", "density_reciprocal")],
-              by = "class",
-              all.x = TRUE)
+             network_summary[, c("class", "density_directed", "density_reciprocal")],
+             by = "class",
+             all.x = TRUE)
 
 names(data)[names(data) == "density_reciprocal"] = "cohesion_recip"
 
@@ -465,9 +419,10 @@ data$cohesion_directed_c = as.numeric(scale(data$cohesion_directed, center = TRU
 
 data$susceptibility_c = as.numeric(scale(data$susceptibility, center = TRUE, scale = FALSE))
 
-# RDS saves the factors etc
+# Save 
 saveRDS(
   data,
   here::here("data","processed","data2_incl_moderation.rds")
 )
-```
+
+message("Moderators computed and saved.")

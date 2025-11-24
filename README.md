@@ -1,193 +1,240 @@
-Statistical Consulting Project 13
-
-This repository contains the full reproducible analysis pipeline for Statistical Consulting Project 13. 
+\# Statistical Consulting Project 13
 
 
-Project Structure
 
-Statistical_Consulting_Project_13/
+This repository contains the analysis pipeline for \*\*Statistical Consulting Project 13\*\*
+
+
+
+---
+
+
+
+\## Project Structure
+
+
+
+```
+
+Statistical\_Consulting\_Project\_13/
+
 │
+
 ├── data/
+
 │   ├── raw/               # Original provided datasets
-│   ├── processed/         # Cleaned & transformed data saved as RDS
+
+│   └── processed/         # Cleaned \& transformed data saved as RDS
+
 │
+
 ├── figures/
+
 │   ├── descriptives/      # All descriptive plots
+
 │   ├── sem-plots/         # CFA visualisations
+
 │   ├── missingness/       # Missingness diagnostics
-│   ├── regression-plots/  # Model estimates, interactions
+
+│   ├── regression-plots/  # Model estimates \& interactions
+
 │   └── diagnostics/       # DHARMa diagnostics
+
 │
+
 ├── scripts/
-│   ├── 00_setup.R               # pipeline — runs everything in sequence
-│   ├── _common.R                # Shared utilities, package loading, helpers
-│   ├── 01_compute_moderators.R  # SUS scores, CFA, networks, cohesion
-│   ├── 02_prepare_data.R        # Preprocessing, recoding, wide → long
-│   ├── 03_descriptives.R        # Descriptive stats + key plots
-│   ├── 04_missingness.R         # Missing data diagnostics
-│   └── 05_modeling.R            # Main GLMM models + moderation
+
+│   ├── 00\_setup.R               # Pipeline — runs everything in sequence
+
+│   ├── \_common.R                # Shared utilities, package loading, helpers
+
+│   ├── 01\_compute\_moderators.R  # SUS scores, CFA, networks, cohesion
+
+│   ├── 02\_prepare\_data.R        # Preprocessing, recoding, wide → long
+
+│   ├── 03\_descriptives.R        # Descriptive stats + key plots
+
+│   ├── 04\_missingness.R         # Missing data diagnostics
+
+│   └── 05\_modeling.R            # Main GLMM models + moderation
+
 │
+
 └── README.md
 
+```
 
-How to Run the Full Pipeline
-1. Install required R packages
 
-All packages used throughout the analysis are loaded via scripts/_common.R.
-You can install missing packages automatically by running:
 
-source("scripts/_common.R")
+---
 
 
-If a package is not installed, the script will stop and tell you which one to install.
 
-2. Run the entire analysis
+\##  How to Run the Full Pipeline
 
-Simply execute:
 
-source("scripts/00_setup.R")
 
+\### \*\*1. Install required R packages\*\*
 
-This will:
 
-Compute social susceptibility & cohesion moderators
 
-Prepare the dataset (wide → long)
+All packages are loaded through `\_common.R`.
 
-Generate all descriptive statistics and plots
+Missing packages will trigger an informative error message.
 
-Conduct missing data analyses
 
-Fit all GLMM models (RQ1 & RQ2)
 
-Save all figures and diagnostics into the figures/ folder
+```r
 
-No manual steps required.
+source("scripts/\_common.R")
 
-📊 Overview of Analysis Steps
-1. Social Susceptibility & Social Cohesion (01_compute_moderators.R)
+```
 
-Reliability analyses (Cronbach’s α, McDonald’s ω)
 
-CFA: 1-factor vs 2-factor SUS structure
 
-SEM path diagrams saved to figures/sem-plots/
+---
 
-Classroom social networks (directed & reciprocal)
 
-Cohesion metrics per class:
 
-Density
+\### \*\*2. Run the entire analysis\*\*
 
-Reciprocity
 
-Transitivity
 
-Path lengths
+Run:
 
-Component size
 
-Outputs saved to:
-data/processed/data2_incl_moderation.rds
 
-2. Data Preparation (02_prepare_data.R)
+```r
 
-Factor recoding
+source("scripts/00\_setup.R")
 
-Extract trial structure (block × target × reward × effort)
+```
 
-Convert wide → long
 
-Clean and recode the binary outcome
 
-Attach moderator variables
+This will automatically perform:
 
-Outputs saved to:
-data/processed/df_wide.rds
-data/processed/df_long.rds
 
-3. Descriptive Statistics (03_descriptives.R)
 
-Generates:
+\* computation of social susceptibility \& cohesion moderators
 
-Reward × Effort plot
+\* data preparation (wide → long)
 
-Target × Block × Group plot
+\* descriptive statistics and visualisation
 
-Ceiling distribution plot
+\* missingness analysis
 
-Summary tables of response patterns
+\* mixed-effects modelling and moderation
 
-Figures saved to:
-figures/descriptives/
+\* exporting all figures to the `figures/` directory
 
-4. Missingness (04_missingness.R)
 
-Includes:
 
-Missing variable summaries
+---
 
-Missing case summaries
 
-Missingness heatmaps
 
-Boxplots for MAR / MCAR exploration
+\## Analysis Overview
 
-Figures saved to:
-figures/missingness/
 
-5. Statistical Modeling (05_modeling.R)
-Research Question 1 (Main Effects of Manipulation)
 
-Mixed-effects logistic regression (glmer)
+\### \*\*1. Moderators (`01\_compute\_moderators.R`)\*\*
 
-Random slopes vs random intercepts comparisons
 
-Test of Target × Group × Block
 
-Odds ratios & confidence intervals
+\* Computes social susceptibility scales
 
-ICC & R²
+\* Reliability (α, ω total)
 
-Post-hoc contrasts (EMMs)
+\* CFA (1-factor vs. 2-factor) + SEM path plots
 
-Research Question 2 (Moderation)
+\* Classroom social networks
 
-Moderation by:
+\* Cohesion metrics (density, reciprocity, clustering, distances)
 
-Social Susceptibility
+\* Saves processed moderator dataset
 
-Classroom Cohesion (directed and reciprocal density)
 
-Fitted using glmmTMB
 
-Full model comparisons (2a–2d, 3a–3d, 4a–4d)
+\### \*\*2. Data Preparation (`02\_prepare\_data.R`)\*\*
 
-DHARMa diagnostics
 
-Figures saved to:
-figures/regression-plots/
-figures/diagnostics/
 
-Reproducibility
+\* Factor recoding
 
-The workflow is fully scripted:
+\* Trial parsing from column names
 
-No manual modifications needed
+\* Wide → long conversion
 
-Figures are automatically regenerated
+\* Outcome cleaning (binary effort choice)
 
-Outputs are deterministic given identical raw data
+\* Attaches moderators
 
-All random-effects models use default seeds unless specified.
 
-👥 Authors & Contact
+
+\### \*\*3. Descriptives (`03\_descriptives.R`)\*\*
+
+
+
+\* Summary statistics
+
+\* Reward × Effort plot
+
+\* Group × Target × Block plot
+
+\* Ceiling effect analysis and plots
+
+
+
+\### \*\*4. Missingness (`04\_missingness.R`)\*\*
+
+
+
+\* Missing data maps
+
+\* Variable-level \& case-level summaries
+
+\* Boxplots to inspect MAR/MNAR patterns
+
+
+
+\### \*\*5. Modeling (`05\_modeling.R`)\*\*
+
+
+
+\* Mixed-effects logistic regression (GLMM)
+
+\* Random-effect structure testing
+
+\* Primary hypothesis testing
+
+\* Post-hoc contrasts via EMMs
+
+\* Moderation (susceptibility, cohesion)
+
+\* Full DHARMa diagnostics
+
+
+
+---
+
+
+
+\## Authors
+
+
 
 This repository was developed as part of:
 
-Statistical Consulting Project 13
-Department of Psychology, Leiden University
 
-For questions or requests, please contact:
-[Your Name]
-Email: your.email@university.nl
+
+\*\*Statistical Consulting Project 13
+
+Faculty of Science, Leiden University\*\*
+
+
+
+---
+
+
+

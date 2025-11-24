@@ -1,0 +1,118 @@
+# 02_prepare_data
+
+
+## --- Data Preparation --- ##
+# Wide → long conversion and variable coding
+
+# --- 1. Import data ---
+df_wide <- readRDS(here::here("data","processed","data2_incl_moderation.rds"))
+
+head(df_wide)
+
+# --- 2. Ensure factors ---
+df_wide <- df_wide |>
+  mutate(
+    ppn = as.factor(ppn),
+    school = factor(school, levels = c(1, 2, 3),
+                    labels = c("1_loc1", "1_loc2", "2")),
+    class = as.factor(class),
+    group = factor(group, levels = c(1, 2, 3),
+                   labels = c("positive_norm", "negative_norm", "control"))
+  ) |>  # we can also combine schools
+  mutate(
+    #
+    school_combined = case_when(
+      school %in% c("1_loc1", "1_loc2") ~ "School_1",
+      school == "2" ~ "School_2"
+    ))
+
+
+# --- 5. Identify trial columns ---
+# Pattern matches trial names like: "1_SELF_2easy40" or "X2_CLIMATE_10hard90"
+# (X)? = optional X prefix
+# [12] = block number (1 or 2)
+# (SELF|CLIMATE|OTHERS) = target type
+# (2|6|10) = reward amount
+# (easy|hard) = difficulty label (not extracted but part of pattern)
+# (40|90) = effort level
+
+
+trial_pattern <- "^(X)?[12]_(SELF|CLIMATE|OTHERS)_(2|6|10)(easy|hard)(40|90)$"
+
+trial_cols <- names(dplyr::select(df_wide, matches(trial_pattern)))
+
+# --- 6. Reshape to long format ---
+df_long <- df_wide |>
+  pivot_longer(
+    cols = all_of(trial_cols),
+    names_to = "trial",
+    values_to = "choice_raw"
+  ) |>
+  mutate(
+    # Clean trial name (remove X prefix if present)
+    trial_clean = str_remove(trial, "^X"),
+    
+    # Extract components from trial name
+    block_num   = as.integer(str_extract(trial_clean, "^[12]")),
+    target_raw  = str_extract(trial_clean, "(SELF|CLIMATE|OTHERS)"),
+    reward_num  = as.integer(str_extract(trial_clean, "(?<=_)\\d{1,2}(?=(easy|hard))")),
+    effort_raw  = as.integer(str_extract(trial_clean, "(40|90)$")),
+    
+    # Create labeled factors with appropriate reference levels
+    block  = factor(block_num, levels = c(1, 2), 
+                    labels = c("pre", "post")),
+    target = factor(target_raw,
+                    levels = c("SELF", "CLIMATE", "OTHERS"),
+                    labels = c("self", "climate", "prosocial")),
+    effort = factor(effort_raw, levels = c(40, 90), 
+                    labels = c("40%", "90%")),
+    reward = factor(reward_num, levels = c(2, 6, 10),
+                    labels = c("2 points", "6 points", "10 points")),
+    choice = case_when(
+      choice_raw == 1 ~ 1L,  # high-effort choice
+      choice_raw == 2 ~ 0L,  # low-effort choice
+      TRUE ~ NA_integer_
+    )
+  ) |>
+  # Set reference levels for contrasts
+  mutate(
+    group = relevel(group, ref = "control"),
+    target = relevel(target, ref = "self"),
+    effort = relevel(effort, ref = "40%"),
+    block = relevel(block, ref = "pre")
+  ) |> 
+  select(ppn, school, school_combined, class, group,
+         trial = trial_clean, block, target, 
+         reward, effort, choice,
+         susceptibility, susceptibility_c,
+         cohesion_directed, cohesion_directed_c,
+         cohesion_recip, cohesion_recip_c,
+  ) 
+
+
+
+
+# --- 7. Checks ---
+# Check structure
+glimpse(df_long)
+
+# Balanced design?
+table(df_long$group, df_long$block)
+table(df_long$target, df_long$block)
+
+# Missing data
+colSums(is.na(df_long))
+
+# Check outcome coding (should be mostly 1s, some 0s)
+prop.table(table(df_long$choice))
+
+
+# --- 8. Save data frames ---
+
+# Save processed data (RDS preserves factors/classes)
+saveRDS(df_long, here::here("data", "processed", "df_long.rds"))
+saveRDS(df_wide, here::here("data", "processed", "df_wide.rds"))
+
+
+
+message("Data prepared and saved.")
