@@ -456,7 +456,6 @@ summary(baseline_glmmTMB)
 
 ### Social Susceptibility Moderation (H4)
 
-
 ```{r}
 # Model 2a: Base model with susceptibility main effect only
 m_suscept_2a <- glmmTMB(
@@ -515,8 +514,7 @@ m_suscept_final <- m_suscept_2b
 
 Decision: Best fitting model is 2b.
 
-
-### Model Summary
+#### Model Summary
 
 ```{r}
 print(summary(m_suscept_final))
@@ -533,17 +531,70 @@ print(round(suscept_coefs[suscept_rows, ],4))
 
 sjPlot::tab_model(m_suscept_2b)
 
+```
+
+#### Model Diagnostics
+
+```{r}
+
+#  Simulate DHARMa residuals
+
+sim_sus <- simulateResiduals(
+  fittedModel = m_suscept_final,
+  n = 1000,
+  plot = FALSE
+)
+
+
+# Main diagnostic plots
+
+plot(sim_sus) # QQ + residuals vs fitted
+
+plotQQunif(sim_sus)  # QQ only
+plotResiduals(sim_sus) # residuals vs predicted only
+
+# Statistical tests
+
+testUniformity(sim_sus)      # Should be non-significant
+testDispersion(sim_sus)      # Should be non-significant
+testOutliers(sim_sus)     # OK if significant for GLMMs, consider type="bootstrap" if significant
+
+# Predictor-specific residual checks
+
+mf_sus <- model.frame(m_suscept_final) # because of NA values 
+
+
+plotResiduals(sim_sus, mf_sus$target, main = "Residuals vs. Target")
+plotResiduals(sim_sus, mf_sus$group, main = "Residuals vs. Group")
+plotResiduals(sim_sus, mf_sus$block, main = "Residuals vs. Block")
+plotResiduals(sim_sus, mf_sus$reward, main = "Residuals vs. Reward")
+plotResiduals(sim_sus, mf_sus$effort, main = "Residuals vs. Effort")
+plotResiduals(sim_sus, mf_sus$school, main = "Residuals vs. School")
+
+
+# Grouped residuals (random-effects diagnostic)
+sim_ppn_sus <- recalculateResiduals(sim_sus, group = mf_sus$ppn)
+plot(sim_ppn_sus)
+testDispersion(sim_ppn_sus)
+
+
+performance::icc(m_suscept_final)
+
+performance::r2(m_suscept_final)
 
 ```
 
-
 ### Classroom Cohesion Moderation (H5)
+
+#### Directed Density
 
 Due to model instability, cohesion is standardized below.
 
 ```{r}
 
+# use directed
 df_long$cohesion_z <- scale(df_long$cohesion_directed)[, 1]
+# df_long$cohesion_z <- scale(df_long$cohesion_recip)[, 1]
 
 m_cohesion_test_no_class <- glmmTMB(
   choice ~ target * group * block + cohesion_z + 
@@ -611,8 +662,115 @@ m_cohesion_3d <- glmmTMB(
 
 print(anova(m_cohesion_3a, m_cohesion_3b, m_cohesion_3c, m_cohesion_3d))
 
+summary(m_cohesion_3c)
+sjPlot::tab_model(m_cohesion_3c)
+```
+
+##### Model Diagnostics
+
+```{r}
+
+#  Simulate DHARMa residuals
+
+sim_coh <- simulateResiduals(
+  fittedModel = m_cohesion_3c,
+  n = 1000,
+  plot = FALSE
+)
+
+
+# Main diagnostic plots
+
+plot(sim_coh) # QQ + residuals vs fitted
+
+plotQQunif(sim_coh)  # QQ only
+plotResiduals(sim_coh) # residuals vs predicted only
+
+# Statistical tests
+
+testUniformity(sim_coh)      # Should be non-significant
+testDispersion(sim_coh)      # Should be non-significant
+testOutliers(sim_coh)     # OK if significant for GLMMs, consider type="bootstrap" if significant
+
+# Predictor-specific residual checks
+
+mf_coh <- model.frame(m_cohesion_3b) # because of NA values 
+
+
+plotResiduals(sim_coh, mf_coh$target_coh, main = "Residuals vs. Target")
+plotResiduals(sim_coh, mf_coh$group_coh, main = "Residuals vs. Group")
+plotResiduals(sim_coh, mf_coh$block, main = "Residuals vs. Block")
+plotResiduals(sim_coh, mf_coh$reward, main = "Residuals vs. Reward")
+plotResiduals(sim_coh, mf_coh$effort, main = "Residuals vs. Effort")
+plotResiduals(sim_coh, mf_coh$school, main = "Residuals vs. School")
+
+
+# Grouped residuals (random-effects diagnostic)
+sim_ppn_coh <- recalculateResiduals(sim_coh, group = mf_coh$ppn)
+plot(sim_ppn_coh)
+testDispersion(sim_ppn_coh)
+
+
+performance::icc(m_cohesion_3c)
+
+performance::r2(m_cohesion_3c)
 
 ```
 
 Decision: The best fitting model if m_cohesion_3c
 
+#### Reciprocal Density
+
+```{r}
+# use reciprocal
+df_long$cohesion_z_recip <- scale(df_long$cohesion_recip)[, 1]
+
+# Model 4a: Base model with cohesion main effect
+
+m_cohesion_4a <- glmmTMB(
+  choice ~ target * group * block + cohesion_z_recip 
+  + reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
+  )
+
+# Model 4b: Add Group × Block × Cohesion
+
+m_cohesion_4b <- glmmTMB(
+    choice ~ target * group * block + 
+             group * block * cohesion_z_recip + 
+             reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
+  )
+
+# Model 4c: Add three-way interactions with target
+
+m_cohesion_4c <- glmmTMB(
+    choice ~ (group * block * target) + 
+             (group * block * cohesion_z_recip) +
+             (group * target * cohesion_z_recip) + 
+             (block * target * cohesion_z_recip) +
+             reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
+  )
+
+# Model 4d: Full four-way interaction
+
+m_cohesion_4d <- glmmTMB(
+    choice ~ group * block * target * cohesion_z_recip + 
+             reward * effort + school +
+      (1 + block | ppn),
+    data = df_long, 
+    family = binomial
+  )
+
+
+print(anova(m_cohesion_4a, m_cohesion_4b, m_cohesion_4c, m_cohesion_4d))
+
+summary(m_cohesion_4b)
+```
