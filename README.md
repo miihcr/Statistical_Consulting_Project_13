@@ -5,7 +5,6 @@
 This repository contains the analysis pipeline for Statistical Consulting Project 13.
 
 
-
 ---
 
 
@@ -22,7 +21,7 @@ Statistical_Consulting_Project_13/
 
 │   ├── raw/               # Original provided datasets
 
-│   └── processed/         # Cleaned \& transformed data saved as RDS
+│   └── processed/         # Cleaned & transformed data saved as RDS
 
 │
 
@@ -34,7 +33,7 @@ Statistical_Consulting_Project_13/
 
 │   ├── missingness/       # Missingness diagnostics
 
-│   ├── regression-plots/  # Model estimates \& interactions
+│   ├── regression-plots/  # Model estimates & interactions
 
 │   └── diagnostics/       # DHARMa diagnostics
 
@@ -42,26 +41,25 @@ Statistical_Consulting_Project_13/
 
 ├── scripts/
 
-│   ├── 00\_setup.R               # Pipeline — runs everything in sequence
+│   ├── 00_setup.R               # Pipeline — runs everything in sequence
 
-│   ├── \_common.R                # Shared utilities, package loading, helpers
+│   ├── _common.R                # Shared utilities, package loading, helpers
 
-│   ├── 01\_compute\_moderators.R  # SUS scores, CFA, networks, cohesion
+│   ├── 01_compute_moderators.R  # SUS scores, CFA, networks, cohesion
 
-│   ├── 02\_prepare\_data.R        # Preprocessing, recoding, wide → long
+│   ├── 02_prepare_data.R        # Preprocessing, recoding, wide → long
 
-│   ├── 03\_descriptives.R        # Descriptive stats + key plots
+│   ├── 03_descriptives.R        # Descriptive stats + key plots
 
-│   ├── 04\_missingness.R         # Missing data diagnostics
+│   ├── 04_missingness.R         # Missing data diagnostics
 
-│   └── 05\_modeling.R            # Main GLMM models + moderation
+│   └── 05_modeling.R            # Main GLMM models + moderation
 
 │
 
 └── README.md
 
 ```
-
 
 ---
 
@@ -72,7 +70,7 @@ Statistical_Consulting_Project_13/
 
 ### 1. Install required R packages
 
-All packages are loaded through `\_common.R`.
+All packages are loaded through `_common.R`.
 
 Missing packages will trigger an informative error message.
 
@@ -81,7 +79,6 @@ Missing packages will trigger an informative error message.
 source("scripts/_common.R")
 
 ```
-
 
 ---
 
@@ -100,7 +97,7 @@ source("scripts/00_setup.R")
 This will automatically perform:
 
 
-* computation of social susceptibility \& cohesion moderators
+* computation of social susceptibility & cohesion moderators
 
 * data preparation (wide → long)
 
@@ -111,7 +108,6 @@ This will automatically perform:
 * mixed-effects modelling and moderation
 
 * exporting all figures to the `figures/` directory
-
 
 
 ---
