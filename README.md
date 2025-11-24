@@ -37,7 +37,7 @@ Statistical_Consulting_Project_13/
 
 │   └── diagnostics/       # DHARMa diagnostics
 
-│
+│        
 
 ├── scripts/
 
@@ -55,6 +55,17 @@ Statistical_Consulting_Project_13/
 
 │   └── 05_modeling.R            # Main GLMM models + moderation
 
+├── analysis/                    # contains the rmd files used for analysis with annotations 
+
+│   ├── 00_moderators 
+
+│   ├── 01_data_preparation              
+
+│   ├── 02_descriptives  
+
+│   ├── 03_missingness.R       
+
+│   ├── 04_statistical_modeling.R  
 │
 
 └── README.md
