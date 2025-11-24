@@ -178,8 +178,7 @@ This will automatically perform:
 
 ## Authors
 
-Milena Costa
-Klāvs Kalvenieks
+Milena Costa and Klāvs Kalvenieks
 
 
 This repository was developed as part of:
