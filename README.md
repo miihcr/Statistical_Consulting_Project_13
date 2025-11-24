@@ -1,22 +1,20 @@
-\# Statistical Consulting Project 13
+# Statistical Consulting Project 13
 
 
 
-This repository contains the analysis pipeline for \*\*Statistical Consulting Project 13\*\*
+This repository contains the analysis pipeline for Statistical Consulting Project 13.
 
 
 
 ---
 
 
-
-\## Project Structure
-
+## Project Structure
 
 
 ```
 
-Statistical\_Consulting\_Project\_13/
+Statistical_Consulting_Project_13/
 
 │
 
@@ -65,173 +63,133 @@ Statistical\_Consulting\_Project\_13/
 ```
 
 
-
 ---
 
 
-
-\##  How to Run the Full Pipeline
-
+##  How to Run the Full Pipeline
 
 
-\### \*\*1. Install required R packages\*\*
 
-
+### 1. Install required R packages
 
 All packages are loaded through `\_common.R`.
 
 Missing packages will trigger an informative error message.
 
-
-
 ```r
 
-source("scripts/\_common.R")
+source("scripts/_common.R")
 
 ```
-
 
 
 ---
 
 
-
-\### \*\*2. Run the entire analysis\*\*
-
-
+### 2. Run the entire analysis
 
 Run:
 
 
-
 ```r
 
-source("scripts/00\_setup.R")
+source("scripts/00_setup.R")
 
 ```
-
-
 
 This will automatically perform:
 
 
+* computation of social susceptibility \& cohesion moderators
 
-\* computation of social susceptibility \& cohesion moderators
+* data preparation (wide → long)
 
-\* data preparation (wide → long)
+* descriptive statistics and visualisation
 
-\* descriptive statistics and visualisation
+* missingness analysis
 
-\* missingness analysis
+* mixed-effects modelling and moderation
 
-\* mixed-effects modelling and moderation
-
-\* exporting all figures to the `figures/` directory
-
-
-
----
-
-
-
-\## Analysis Overview
-
-
-
-\### \*\*1. Moderators (`01\_compute\_moderators.R`)\*\*
-
-
-
-\* Computes social susceptibility scales
-
-\* Reliability (α, ω total)
-
-\* CFA (1-factor vs. 2-factor) + SEM path plots
-
-\* Classroom social networks
-
-\* Cohesion metrics (density, reciprocity, clustering, distances)
-
-\* Saves processed moderator dataset
-
-
-
-\### \*\*2. Data Preparation (`02\_prepare\_data.R`)\*\*
-
-
-
-\* Factor recoding
-
-\* Trial parsing from column names
-
-\* Wide → long conversion
-
-\* Outcome cleaning (binary effort choice)
-
-\* Attaches moderators
-
-
-
-\### \*\*3. Descriptives (`03\_descriptives.R`)\*\*
-
-
-
-\* Summary statistics
-
-\* Reward × Effort plot
-
-\* Group × Target × Block plot
-
-\* Ceiling effect analysis and plots
-
-
-
-\### \*\*4. Missingness (`04\_missingness.R`)\*\*
-
-
-
-\* Missing data maps
-
-\* Variable-level \& case-level summaries
-
-\* Boxplots to inspect MAR/MNAR patterns
-
-
-
-\### \*\*5. Modeling (`05\_modeling.R`)\*\*
-
-
-
-\* Mixed-effects logistic regression (GLMM)
-
-\* Random-effect structure testing
-
-\* Primary hypothesis testing
-
-\* Post-hoc contrasts via EMMs
-
-\* Moderation (susceptibility, cohesion)
-
-\* Full DHARMa diagnostics
+* exporting all figures to the `figures/` directory
 
 
 
 ---
 
+## Analysis Overview
+
+### 1. Moderators (`01_compute_moderators.R`)
+
+* Computes social susceptibility scales
+
+* Reliability (α, ω total)
+
+* CFA (1-factor vs. 2-factor) + SEM path plots
+
+* Classroom social networks
+
+* Cohesion metrics (density, reciprocity, clustering, distances)
+
+* Saves processed moderator dataset
+
+### 2. Data Preparation (`02_prepare_data.R`)
+
+* Factor recoding
+
+* Trial parsing from column names
+
+* Wide → long conversion
+
+* Outcome cleaning (binary effort choice)
+
+* Attaches moderators
+
+### 3. Descriptives (`03_descriptives.R`)
+
+* Summary statistics
+
+* Reward × Effort plot
+
+* Group × Target × Block plot
+
+* Ceiling effect analysis and plots
+* 
+
+### 4. Missingness (`04_missingness.R`)
+
+* Missing data maps
+
+* Variable-level \& case-level summaries
+
+* Boxplots to inspect MAR/MNAR patterns
 
 
-\## Authors
+### 5. Modeling (`05_modeling.R`)
 
+* Mixed-effects logistic regression (GLMM)
+
+* Random-effect structure testing
+
+* Primary hypothesis testing
+
+* Post-hoc contrasts via EMMs
+
+* Moderation (susceptibility, cohesion)
+
+* Full DHARMa diagnostics
+
+---
+
+## Authors
+
+Milena Costa
+Klāvs Kalvenieks
 
 
 This repository was developed as part of:
 
-
-
-\*\*Statistical Consulting Project 13
-
-Faculty of Science, Leiden University\*\*
-
+Statistical Consulting Project 13
+Faculty of Science, Leiden University
 
 
 ---
