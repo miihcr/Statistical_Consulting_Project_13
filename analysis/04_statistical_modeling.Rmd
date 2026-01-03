@@ -681,34 +681,9 @@ performance::r2(m_cohesion_3a)
 
 theme_set(theme_sjplot())
 
-terms_cohesion_keep <- c(
-  # 3-way interactions 
-  "grouppositive_norm:blockpost:cohesion_capped_c ",
-  "groupnegative_norm:blockpost:cohesion_capped_c ",
-  "grouppositive_norm:targetclimate:cohesion_capped_c ",
-  "groupnegative_norm:targetclimate:cohesion_capped_c ",
-  "grouppositive_norm:targetprosocial:cohesion_capped_c ",
-  "groupnegative_norm:targetprosocial:cohesion_capped_c ",
-  "blockpost:targetclimate:cohesion_capped_c ",
-  "blockpost:targetprosocial:cohesion_capped_c ",
-  
-  # 2-way interactions
-  "grouppositive_norm:cohesion_capped_c ",
-  "groupnegative_norm:cohesion_capped_c ",
-  "blockpost:cohesion_capped_c ",
-  "targetclimate:cohesion_capped_c ",
-  "targetprosocial:cohesion_capped_c ",
-  
-  # main effect
-
-  "cohesion_capped_c "
-
-)
-
 p_cohesion_3a <- sjPlot::plot_model(
   m_cohesion_3a,
-  type = "est",
-  terms = terms_cohesion_keep,   # <- this is what removes stuff
+  type = "est",   # <- this is what removes stuff
   sort.est = FALSE,              # <- respects your order above
   show.intercept = FALSE,
   vline.color = "red"
