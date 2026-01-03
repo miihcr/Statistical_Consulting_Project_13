@@ -191,11 +191,21 @@ or_table_display$p_value <- round(or_table_display$p_value, 4)
 print(or_table_display)
 
 
-# Model estimates plot
 theme_set(theme_sjplot())
-sjPlot::plot_model(m_full, 
-                   sort.est=T,
+sjPlot::plot_model(m_full,
+                   order.terms = c( 21, 22, 23, 24, # 3-way interactions 
+                                    17, 18,           # Group × Block interactions 
+                                    15, 16,           # Target × Block interactions 
+                                    11, 12, 13, 14,   # Target × Group interactions 
+                                    5,                # blockpost 
+                                    3, 4,             # group main effects 
+                                    1, 2,             # target main effects 
+                                    6, 7, 8,          # reward and effort main effects 
+                                    19, 20,           # reward × effort interactions 
+                                    9, 10             # school effects 
+                   ),            # school effects)
                    vline.color = "red")
+
 
 
 ggsave("figures/regression-plots/model-estimates.png",
@@ -224,24 +234,19 @@ round(r2_vals$R2_conditional, 3)
 
 ## 4. Post-hoc Analyses
 
-### 4. 1. Reward $\times$ Effort interaction
+Only in the case of a significant interaction. This was not the case.
+
 
 ```{r}
 
-#  Predicted probabilities 
+# 4.1 Reward × Effort
 
 emm_re <- emmeans(final_model, ~ reward * effort, type = "response")
-
-# Simple slopes: Effect of effort at each reward level
 contrast(emm_re, "pairwise", by = "reward", adjust = "holm")
-
-# Simple slopes: Effect of reward at each effort level
 contrast(emm_re, "pairwise", by = "effort", adjust = "holm")
 
-# Visualization
 
 gg_re <- ggpredict(final_model, terms = c("reward", "effort"))
-
 plot_re <- plot(gg_re) +
   labs(
     title = "Predicted Probability of High-Effort Choice",
@@ -257,31 +262,15 @@ ggsave("figures/regression-plots/reward_effort_interaction.png",
        width = 7, height = 5, dpi = 300)
 
 
-
-
-```
-
-### 4. 2. Target $\times$ Group interaction (Exploratory)
-
-```{r}
-
+# 4. 2. Target $\times$ Group interaction (Exploratory)
 
 # Estimated marginal means
 emm_tg <- emmeans(final_model, ~ target * group, type = "response")
-
-
-# Simple effects: Target differences within each group
-
 contrast(emm_tg, "pairwise", by = "group", adjust = "holm")
-
-# Simple effects: Group differences within each target
-
 contrast(emm_tg, "pairwise", by = "target", adjust = "holm")
 
-# Visualization
 
 gg_tg <- ggpredict(final_model, terms = c("target", "group"))
-
 plot_tg <- plot(gg_tg) +
   labs(
     title = "Target × Group Interaction (Exploratory)",
@@ -297,22 +286,11 @@ ggsave("figures/regression-plots/target_group_interaction.png",
        plot = plot_tg,
        width = 7, height = 5, dpi = 300)
 
+# 4.3 Block × Group × Target (Primary hypothesis display)
 
 
-
-```
-
-### 4. 3. Block × Group × Target: Primary Hypothesis - NULL finding
-
-```{r}
-
-# Estimated marginal means for full three-way
 emm_full <- emmeans(final_model, ~ target * group * block,
                     type = "response")
-
-
-
-# Pre-to-post changes within each Target × Group combination
  
 prepost <- contrast(
   emm_full,
@@ -320,7 +298,7 @@ prepost <- contrast(
   by = c("target", "group")
 )
 
-print(as.data.frame(prepost))
+as.data.frame(prepost)
 
 # Difference-in-differences: Compare change scores across groups
 
@@ -330,7 +308,7 @@ did <- contrast(
   by = "target",
   adjust = "holm"
 )
-print(as.data.frame(did))
+as.data.frame(did)
 
 # Visualization showing ceiling effect
 
@@ -347,10 +325,7 @@ plot_3way <- plot(gg_3way) +
   facet_wrap(~ facet, ncol = 3) +
   theme_bw() +
   scale_y_continuous(limits = c(0.85, 1.0)) +  # Show the ceiling
-  geom_hline(yintercept = 0.92, linetype = "dashed", color = "red", alpha = 0.5) +
-  annotate("text", x = 1.5, y = 0.86, 
-           label = "Red line = observed mean (92.4%)", 
-           size = 3, color = "red")
+  geom_hline(yintercept = 0.92, linetype = "dashed", color = "red", alpha = 0.5)
 
 
 
@@ -359,9 +334,8 @@ ggsave("figures/regression-plots/three_way_interaction_primary_hypothesis.png",
        width = 7, height = 5, dpi = 300)
 
 
-
-
 ```
+
 
 ## 5. Final Model Diagnostics
 
@@ -412,13 +386,7 @@ performance::icc(final_model)
 
 performance::r2(final_model)
 
-
-```
-
-### Save Plots for report
-
-```{r}
-# Save plots
+# Save diagnostic plots
 
 w <- 7
 h <- 5
@@ -444,7 +412,7 @@ dev.off()
 
 ```
 
-## Research Question 2: Moderation Analysis
+## Research Question 2 (glmmTMB)
 
 Are these effects moderated by (a) individual social susceptibility and (b) classroom cohesion?
 
@@ -453,7 +421,7 @@ Note: the following analyses make use of \texttt{glmmTMB} due to the complexity 
 We first verify if lme4 and glmmTMB produce equivalent results
 
 ```{r}
-# Fit baseline model in glmmTMB
+# Fit baseline equivalent model in glmmTMB
 baseline_glmmTMB <- glmmTMB(
   choice ~ target * group * block + reward * effort + 
                              school +
@@ -522,27 +490,13 @@ m_suscept_2d <- glmmTMB(
 print(anova(m_suscept_2a, m_suscept_2b, m_suscept_2c, m_suscept_2d))
 
 m_suscept_final <- m_suscept_2b
+summary(m_suscept_final)
+sjPlot::tab_model(m_suscept_final)
 
 ```
 
 Decision: Best fitting model is 2b.
 
-#### Model Summary
-
-```{r}
-print(summary(m_suscept_final))
-
-# Extract key coefficients
-
-suscept_coefs <- summary(m_suscept_final)$coefficients$cond
-suscept_rows <- grep("susceptibility", rownames(suscept_coefs), ignore.case = TRUE)
-
-
-print(round(suscept_coefs[suscept_rows, ],4))
-
-sjPlot::tab_model(m_suscept_2b)
-
-```
 
 #### Model Diagnostics
 
@@ -595,20 +549,17 @@ performance::r2(m_suscept_final)
 
 ```
 
-### Classroom Cohesion Moderation (H5)
 
-#### Directed Density
+### Classroom Cohesion Moderation (H5) 
 
-Due to model instability, cohesion is standardized below.
+#### Capped Directed Density
+
 
 ```{r}
 
-# use directed
-df_long$cohesion_z <- scale(df_long$cohesion_directed)[, 1]
-# df_long$cohesion_z <- scale(df_long$cohesion_recip)[, 1]
 
 m_cohesion_test_no_class <- glmmTMB(
-  choice ~ target * group * block + cohesion_z + 
+  choice ~ target * group * block + cohesion_capped_c + 
            reward * effort + school +
     (1 + block | ppn),
   data = df_long, 
@@ -616,7 +567,7 @@ m_cohesion_test_no_class <- glmmTMB(
 )
 
 m_cohesion_test_with_class <- glmmTMB(
-  choice ~ target * group * block + cohesion_z  + 
+  choice ~ target * group * block + cohesion_capped_c   + 
            reward * effort + school +
     (1 + block | ppn) + (1 | class),
   data = df_long, 
@@ -629,7 +580,7 @@ print(anova(m_cohesion_test_no_class, m_cohesion_test_with_class))
 # Model 3a: Base model with cohesion main effect
 
 m_cohesion_3a <- glmmTMB(
-  choice ~ target * group * block + cohesion_z 
+  choice ~ target * group * block + cohesion_capped_c  
   + reward * effort + school +
       (1 + block | ppn),
     data = df_long, 
@@ -640,7 +591,7 @@ m_cohesion_3a <- glmmTMB(
 
 m_cohesion_3b <- glmmTMB(
     choice ~ target * group * block + 
-             group * block * cohesion_z + 
+             group * block * cohesion_capped_c  + 
              reward * effort + school +
       (1 + block | ppn),
     data = df_long, 
@@ -651,9 +602,9 @@ m_cohesion_3b <- glmmTMB(
 
 m_cohesion_3c <- glmmTMB(
     choice ~ (group * block * target) + 
-             (group * block * cohesion_z) +
-             (group * target * cohesion_z) + 
-             (block * target * cohesion_z) +
+             (group * block * cohesion_capped_c ) +
+             (group * target * cohesion_capped_c ) + 
+             (block * target * cohesion_capped_c ) +
              reward * effort + school +
       (1 + block | ppn),
     data = df_long, 
@@ -663,7 +614,7 @@ m_cohesion_3c <- glmmTMB(
 # Model 3d: Full four-way interaction
 
 m_cohesion_3d <- glmmTMB(
-    choice ~ group * block * target * cohesion_z + 
+    choice ~ group * block * target * cohesion_capped_c  + 
              reward * effort + school +
       (1 + block | ppn),
     data = df_long, 
@@ -673,8 +624,8 @@ m_cohesion_3d <- glmmTMB(
 
 print(anova(m_cohesion_3a, m_cohesion_3b, m_cohesion_3c, m_cohesion_3d))
 
-summary(m_cohesion_3c)
-sjPlot::tab_model(m_cohesion_3c)
+summary(m_cohesion_3a)
+sjPlot::tab_model(m_cohesion_3a)
 ```
 
 ##### Model Diagnostics
@@ -684,7 +635,7 @@ sjPlot::tab_model(m_cohesion_3c)
 #  Simulate DHARMa residuals
 
 sim_coh <- simulateResiduals(
-  fittedModel = m_cohesion_3c,
+  fittedModel = m_cohesion_3a,
   n = 1000,
   plot = FALSE
 )
@@ -722,85 +673,86 @@ plot(sim_ppn_coh)
 testDispersion(sim_ppn_coh)
 
 
-performance::icc(m_cohesion_3c)
+performance::icc(m_cohesion_3a)
 
-performance::r2(m_cohesion_3c)
+performance::r2(m_cohesion_3a)
 
-# Model estimates plots
+# Model estimates plots (only important ones)
 
-sjPlot::plot_model(m_suscept_2b, 
-                   sort.est=T,
-                   vline.color = "red")
+theme_set(theme_sjplot())
+
+terms_cohesion_keep <- c(
+  # 3-way interactions 
+  "grouppositive_norm:blockpost:cohesion_capped_c ",
+  "groupnegative_norm:blockpost:cohesion_capped_c ",
+  "grouppositive_norm:targetclimate:cohesion_capped_c ",
+  "groupnegative_norm:targetclimate:cohesion_capped_c ",
+  "grouppositive_norm:targetprosocial:cohesion_capped_c ",
+  "groupnegative_norm:targetprosocial:cohesion_capped_c ",
+  "blockpost:targetclimate:cohesion_capped_c ",
+  "blockpost:targetprosocial:cohesion_capped_c ",
+  
+  # 2-way interactions
+  "grouppositive_norm:cohesion_capped_c ",
+  "groupnegative_norm:cohesion_capped_c ",
+  "blockpost:cohesion_capped_c ",
+  "targetclimate:cohesion_capped_c ",
+  "targetprosocial:cohesion_capped_c ",
+  
+  # main effect
+
+  "cohesion_capped_c "
+
+)
+
+p_cohesion_3a <- sjPlot::plot_model(
+  m_cohesion_3a,
+  type = "est",
+  terms = terms_cohesion_keep,   # <- this is what removes stuff
+  sort.est = FALSE,              # <- respects your order above
+  show.intercept = FALSE,
+  vline.color = "red"
+)
+
+p_cohesion_3a
+
+ggsave("figures/regression-plots/m-cohesion-3a.png",
+       plot = p_cohesion_3a, width = 7, height = 5, dpi = 300)
+
+theme_set(theme_sjplot())
+
+terms_suscept_keep <- c(
+  # 3-way interactions 
+  "grouppositive_norm:blockpost:susceptibility_c",
+  "groupnegative_norm:blockpost:susceptibility_c",
+  
+  # 2-way interactions 
+
+  "grouppositive_norm:susceptibility_c",
+  "groupnegative_norm:susceptibility_c",
+  "blockpost:susceptibility_c",
+  
+  # main effects 
+
+  "susceptibility_c"
+
+)
+
+p_suscept_2b <- sjPlot::plot_model(
+  m_suscept_2b,
+  type = "est",
+  terms = terms_suscept_keep,
+  sort.est = FALSE,
+  show.intercept = FALSE,
+  vline.color = "red"
+)
 
 ggsave("figures/regression-plots/m-suscept-2b.png",
-       width = 7, height = 5, dpi = 300)
-
-sjPlot::plot_model(m_cohesion_3c, 
-                   sort.est=T,
-                   vline.color = "red")
-
-
-ggsave("figures/regression-plots/m-cohesion-3c.png",
-       width = 7, height = 5, dpi = 300)
+       plot = p_suscept_2b, width = 7, height = 5, dpi = 300)
 
 
 
 ```
 
-Decision: The best fitting model is m_cohesion_3c
+Decision: The best fitting model is m_cohesion_3a
 
-#### Reciprocal Density
-
-```{r}
-# use reciprocal
-df_long$cohesion_z_recip <- scale(df_long$cohesion_recip)[, 1]
-
-# Model 4a: Base model with cohesion main effect
-
-m_cohesion_4a <- glmmTMB(
-  choice ~ target * group * block + cohesion_z_recip 
-  + reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
-
-# Model 4b: Add Group × Block × Cohesion
-
-m_cohesion_4b <- glmmTMB(
-    choice ~ target * group * block + 
-             group * block * cohesion_z_recip + 
-             reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
-
-# Model 4c: Add three-way interactions with target
-
-m_cohesion_4c <- glmmTMB(
-    choice ~ (group * block * target) + 
-             (group * block * cohesion_z_recip) +
-             (group * target * cohesion_z_recip) + 
-             (block * target * cohesion_z_recip) +
-             reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
-
-# Model 4d: Full four-way interaction
-
-m_cohesion_4d <- glmmTMB(
-    choice ~ group * block * target * cohesion_z_recip + 
-             reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
-
-
-print(anova(m_cohesion_4a, m_cohesion_4b, m_cohesion_4c, m_cohesion_4d))
-
-summary(m_cohesion_4b)
-```

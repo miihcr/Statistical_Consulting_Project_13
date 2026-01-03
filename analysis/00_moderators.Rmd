@@ -190,7 +190,7 @@ semPaths(fit2,
 
 dev.off()
 
-# Visualize the measurement model
+# ONE FACTOR MODEL MODEL (WITHOUT ITEM 2)
 png("figures/sem-plots/semplot_minus2.png", width = 7, height = 5, res = 300,
     units = "in")
 
@@ -206,31 +206,34 @@ dev.off()
 ## Social Cohesion
 
 ```{r}
-data$ppn = as.character(data$ppn)
-data$class = as.character(data$class)
-data$nom_like = as.character(data$nom_like)
 
-data_sn = subset(data, select = c(ppn, school, class, nom_like))
+data$ppn      <- as.character(data$ppn)
+data$class    <- as.character(data$class)
+data$school   <- as.character(data$school)
+data$nom_like <- as.character(data$nom_like)
+
+data_sn <- subset(data, select = c(ppn, school, class, nom_like))
 
 # Convert comma-separated nominations to list
-data_sn$nom_like = strsplit((data_sn$nom_like), ",")
+data_sn$nom_like <- strsplit(data_sn$nom_like, ",")
+
 ```
 
 ```{r}
 # Expand to long format
-edges = unnest(data_sn, cols = c(nom_like))
+edges <- unnest(data_sn, cols = c(nom_like))
 
-# Clean up whitespace and remove NA
-edges$nom_like = str_trim(edges$nom_like)
-edges = subset(edges, nom_like != "" & !is.na(nom_like))
-
-# Create node list (all participants)
-nodes = data_sn[, c("ppn", "school", "class")]
-colnames(nodes)[1] = "name"   # igraph expects "name" for node IDs
+# Clean up whitespace and remove NA/empty
+edges$nom_like <- str_trim(edges$nom_like)
+edges <- subset(edges, nom_like != "" & !is.na(nom_like))
 
 # Rename for clarity
-colnames(edges)[colnames(edges) == "nom_like"] = "target"
-colnames(edges)[colnames(edges) == "ppn"] = "source"
+colnames(edges)[colnames(edges) == "nom_like"] <- "target"
+colnames(edges)[colnames(edges) == "ppn"]      <- "source"
+
+nodes <- data_sn[, c("ppn", "school", "class")]
+colnames(nodes)[1] <- "name" 
+
 ```
 
 Not all id's are present in dataset, but they have been nominated. Check which one have to be added
@@ -238,133 +241,120 @@ Not all id's are present in dataset, but they have been nominated. Check which o
 ### Missing id's
 
 ```{r}
-# Check per class for nominations not present in ppn
-classes = sort(unique(edges$class))
+classes <- sort(unique(data_sn$class))  
 
-invalid_all = data.frame(name = numeric(), class = numeric(), school = numeric())
+invalid_all <- data.frame(name = character(), class = character(), school = character())
 
 for (c in classes) {
   cat("\nClass:", c, "\n")
   
-  class_data  = subset(edges, class == c)
-  class_nodes = subset(nodes, class == c)
+  class_edges <- subset(edges, class == c)
+  class_nodes <- subset(nodes, class == c)
   
-  # IDs mentioned but not present
-  invalid_ids = setdiff(unique(class_data$target), unique(class_nodes$name))
+  invalid_ids <- setdiff(unique(class_edges$target), unique(class_nodes$name))
   
   if (length(invalid_ids) == 0) {
-    cat("All nominations in this class refer to existing participants.\n")
+    cat("All nominations in this class refer to existing nodes.\n")
   } else {
-    cat("Invalid nominations found (does not have ppn in original data):\n")
+    cat("IDs nominated but not present in original data:\n")
     print(invalid_ids)
     
-    # Store these invalid IDs in a data frame
-    temp = data.frame(
-      name = invalid_ids,
-      class = rep(c, length(invalid_ids)),
-      school = unique(class_nodes$school)  # assumes all rows in class_nodes have same school
+    temp <- data.frame(
+      name   = invalid_ids,
+      class  = rep(c, length(invalid_ids)),
+      school = rep(unique(class_nodes$school)[1], length(invalid_ids))
     )
-    invalid_all = rbind(invalid_all, temp)
+    invalid_all <- rbind(invalid_all, temp)
   }
 }
+
+
 ```
 
 ```{r}
 # Combine invalid nodes with the original node list
-nodes_extended = rbind(nodes, invalid_all)
+nodes_extended <- rbind(nodes, invalid_all)
+
 ```
 
 ### Plots and metrics
 
 ```{r}
-# Ensure plotting margins
+
 par(mar = c(1, 1, 2, 1))
 
-# Create an empty results data frame
-network_summary = data.frame(
+network_summary <- data.frame(
   class = character(),
-  density_directed = numeric(),
-  density_reciprocal = numeric(),
+  n_nodes = numeric(),
+  n_edges = numeric(),
+  n_nominators = numeric(),
+  cohesion_capped = numeric(),
+  avg_outdegree = numeric(),
+  density_directed_raw = numeric(),   
   reciprocity = numeric(),
   transitivity = numeric(),
-  path_length_min = numeric(),
-  path_length_max = numeric(),
-  path_length_mean = numeric(),
   n_components = numeric(),
   largest_component_size = numeric(),
   stringsAsFactors = FALSE
 )
 
-# Loop through each class
+max_outdegree <- 5  # nomination cap
+
 for (cls in classes) {
-  # Subset edges and nodes for this class
-  edges_sub = subset(edges, class == cls)
-  nodes_sub = subset(nodes_extended, class == cls)
+  edges_sub <- subset(edges, class == cls)
+  nodes_sub <- subset(nodes_extended, class == cls)
   
-  # Build graph including all nodes
-  g = graph_from_data_frame(
-    d = edges_sub[, c("source", "target", "class", "school")],
+  g <- graph_from_data_frame(
+    d = edges_sub[, c("source", "target")],
     vertices = nodes_sub,
     directed = TRUE
   )
   
-  # Compute network metrics
-  dens = round(edge_density(g, loops = FALSE),3) # directed density
+  n_nodes <- vcount(g)
+  n_edges <- ecount(g)
   
-  # Reciprocated ties density (undirected)
-  g_recip = as.undirected(g, mode = "mutual")
-  dens_recip = round(edge_density(g_recip, loops = FALSE), 3)
+  # Number of students who could nominate
+  n_nominators <- nrow(subset(data_sn, class == cls))
   
-  rec = round(reciprocity(g),3) # Reciprocity (only makes sense for directed graphs)
-  trans = round(transitivity(g, type = "global"),3) # Transitivity (global clustering coefficient)
+  # Raw density 
+  dens_raw <- edge_density(g, loops = FALSE)
   
-  # Shortest path lengths
-  dists = distances(g)
-  dists[is.infinite(dists)] = NA  # ignore disconnected pairs
-  path_min = min(dists, na.rm = TRUE)
-  path_max = max(dists, na.rm = TRUE)
-  path_mean = round(mean(dists, na.rm = TRUE),3)
+  avg_outdeg <- ifelse(n_nominators > 0, n_edges / n_nominators, NA)
+  capped_den <- ifelse(n_nominators > 0, avg_outdeg / max_outdegree, NA)
   
-  # Connected components
-  comps = components(g, mode = "weak")
-  n_comp = comps$no
-  largest_comp = max(comps$csize)
+  rec <- reciprocity(g)
+  trans <- transitivity(g, type = "global")
   
-  # Store results
-  network_summary = rbind(network_summary, data.frame(
+  comps <- components(g, mode = "weak")
+  n_comp <- comps$no
+  largest_comp <- max(comps$csize)
+  
+  network_summary <- rbind(network_summary, data.frame(
     class = cls,
-    density_directed = dens,
-    density_reciprocal = dens_recip,
-    reciprocity = rec,
-    transitivity = trans,
-    path_length_min = path_min,
-    path_length_max = path_max,
-    path_length_mean = path_mean,
+    n_nodes = n_nodes,
+    n_edges = n_edges,
+    n_nominators = n_nominators,
+    avg_outdegree = round(avg_outdeg, 3),
+    cohesion_capped = round(capped_den, 3),
+    density_directed_raw = round(dens_raw, 3),
+    reciprocity = round(rec, 3),
+    transitivity = round(trans, 3),
     n_components = n_comp,
     largest_component_size = largest_comp
   ))
   
-  # Plot each network
+  
   plot(
     g,
-    main = paste("Directed Network for Class", cls),
-    edge.width = 0.5,
-    vertex.size = 15,
-    vertex.label.cex = 0.8,
-    layout = layout_with_fr
-  )
-  
-    plot(
-    g_recip,
-    main = paste("Reciprocal Network for Class", cls),
-    edge.width = 0.5,
-    vertex.size = 15,
-    vertex.label.cex = 0.8,
+    main = paste("Directed nomination network – Class", cls),
+    edge.width = 0.6,
+    vertex.size = 14,
+    vertex.label.cex = 0.7,
     layout = layout_with_fr
   )
 }
 
-network_summary
+print(network_summary)
 
 ```
 
@@ -373,6 +363,7 @@ network_summary
 Descriptives of each class to see how they compare against each other
 
 ```{r}
+
 # Clean nominations column into numeric lists
 data_sn$nominations_clean = lapply(data_sn$nom_like, function(x) {
   if (is.null(x) || all(is.na(x))) return(NA)
@@ -421,6 +412,7 @@ for (i in seq_along(classes)) {
 
 # View results
 print(class_summary)
+
 ```
 
 ```{r}
@@ -434,40 +426,39 @@ print(network_overview)
 ### Adjusting original dataset
 
 ```{r}
-# Add new column: mean per row (ignore missing values)
-data$susceptibility = round(rowMeans(data[, all_items], na.rm = TRUE),2)
+# Add susceptibility
+data$susceptibility <- round(rowMeans(data[, all_items], na.rm = TRUE), 2)
 
-# For missing values: Compute class means for susceptibility
-class_means = tapply(data$susceptibility, data$class, mean, na.rm = TRUE)
+# Impute missing susceptibility by class mean
+class_means <- tapply(data$susceptibility, data$class, mean, na.rm = TRUE)
 
 for (i in 1:nrow(data)) {
   if (is.na(data$susceptibility[i])) {
-    cls <- data$class[i]
-    data$susceptibility[i] <- class_means[as.character(cls)]
+    cls <- as.character(data$class[i])
+    data$susceptibility[i] <- class_means[cls]
   }
 }
 
+# Merge cohesion into main dataset
+data <- merge(
+  data,
+  network_summary[, c("class", "cohesion_capped", "avg_outdegree")],
+  by = "class",
+  all.x = TRUE
+)
 
-# Add cohesion (density per class from network_summary)
-data = merge(data,
-              network_summary[, c("class", "density_directed", "density_reciprocal")],
-              by = "class",
-              all.x = TRUE)
+# Center variables
+data$avg_outdegree_c     <- as.numeric(scale(data$avg_outdegree, center = TRUE, scale = FALSE))
+data$cohesion_capped_c   <- as.numeric(scale(data$cohesion_capped, center = TRUE, scale = FALSE))
+data$susceptibility_c    <- as.numeric(scale(data$susceptibility, center = TRUE, scale = FALSE))
 
-names(data)[names(data) == "density_reciprocal"] = "cohesion_recip"
-
-names(data)[names(data) == "density_directed"] = "cohesion_directed"
-
-# Center it for the analysis
-data$cohesion_recip_c = as.numeric(scale(data$cohesion_recip, center = TRUE, scale = FALSE))
-
-data$cohesion_directed_c = as.numeric(scale(data$cohesion_directed, center = TRUE, scale = FALSE))
-
-data$susceptibility_c = as.numeric(scale(data$susceptibility, center = TRUE, scale = FALSE))
-
-# RDS saves the factors etc
+# Save
 saveRDS(
   data,
-  here::here("data","processed","data2_incl_moderation.rds")
+  here::here("data", "processed", "data2_incl_moderation.rds")
 )
+
+
 ```
+
+

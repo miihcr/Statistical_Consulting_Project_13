@@ -29,14 +29,18 @@ df_wide <- df_wide |>
                     labels = c("1_loc1", "1_loc2", "2")),
     class = as.factor(class),
     group = factor(group, levels = c(1, 2, 3),
-                   labels = c("positive_norm", "negative_norm", "control"))
+                   labels = c("control", "positive_norm", "negative_norm"))
   ) |>  # we can also combine schools
   mutate(
     #
     school_combined = case_when(
       school %in% c("1_loc1", "1_loc2") ~ "School_1",
       school == "2" ~ "School_2"
-    ))
+    )) |> 
+  mutate(
+     cohesion_capped = as.numeric(cohesion_capped),
+    cohesion_capped_c = as.numeric(scale(cohesion_capped, center = TRUE, scale = FALSE))
+  )
 
 
 # --- 5. Identify trial columns ---
@@ -61,47 +65,42 @@ df_long <- df_wide |>
     values_to = "choice_raw"
   ) |>
   mutate(
-    # Clean trial name (remove X prefix if present)
     trial_clean = str_remove(trial, "^X"),
-    
-    # Extract components from trial name
     block_num   = as.integer(str_extract(trial_clean, "^[12]")),
     target_raw  = str_extract(trial_clean, "(SELF|CLIMATE|OTHERS)"),
     reward_num  = as.integer(str_extract(trial_clean, "(?<=_)\\d{1,2}(?=(easy|hard))")),
     effort_raw  = as.integer(str_extract(trial_clean, "(40|90)$")),
-    
-   # Create labeled factors with appropriate reference levels
-    block  = factor(block_num, levels = c(1, 2), 
+
+    block  = factor(block_num, levels = c(1, 2),
                     labels = c("pre", "post")),
     target = factor(target_raw,
                     levels = c("SELF", "CLIMATE", "OTHERS"),
                     labels = c("self", "climate", "prosocial")),
-    effort = factor(effort_raw, levels = c(40, 90), 
+    effort = factor(effort_raw, levels = c(40, 90),
                     labels = c("40%", "90%")),
     reward = factor(reward_num, levels = c(2, 6, 10),
                     labels = c("2 points", "6 points", "10 points")),
+
     choice = case_when(
-      choice_raw == 1 ~ 1L,  # high-effort choice
-      choice_raw == 2 ~ 0L,  # low-effort choice
+      choice_raw == 1 ~ 1L,
+      choice_raw == 2 ~ 0L,
       TRUE ~ NA_integer_
     )
   ) |>
-    # Set reference levels for contrasts
   mutate(
-    group = relevel(group, ref = "control"),
+    group  = relevel(group,  ref = "control"),
     target = relevel(target, ref = "self"),
     effort = relevel(effort, ref = "40%"),
-    block = relevel(block, ref = "pre")
-  ) |> 
-  select(ppn, school, school_combined, class, group,
-         trial = trial_clean, block, target, 
-         reward, effort, choice,
-         susceptibility, susceptibility_c,
-         cohesion_directed, cohesion_directed_c,
-         cohesion_recip, cohesion_recip_c,
-         ) 
- 
-
+    block  = relevel(block,  ref = "pre")
+  ) |>
+  select(
+    ppn, school, school_combined, class, group,
+    trial = trial_clean, block, target,
+    reward, effort, choice,
+    susceptibility, susceptibility_c,
+    cohesion_capped, cohesion_capped_c,
+    avg_outdegree, avg_outdegree_c
+  )
 
 
 # --- 7. Checks ---

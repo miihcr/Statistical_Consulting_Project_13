@@ -178,8 +178,18 @@ print(or_table_display)
 
 # Model estimates plot
 theme_set(theme_sjplot())
-sjPlot::plot_model(m_full, 
-                   sort.est=T,
+sjPlot::plot_model(m_full,
+                   order.terms = c( 21, 22, 23, 24, # 3-way interactions 
+                                    17, 18,           # Group × Block interactions 
+                                    15, 16,           # Target × Block interactions 
+                                    11, 12, 13, 14,   # Target × Group interactions 
+                                    5,                # blockpost 
+                                    3, 4,             # group main effects 
+                                    1, 2,             # target main effects 
+                                    6, 7, 8,          # reward and effort main effects 
+                                    19, 20,           # reward × effort interactions 
+                                    9, 10             # school effects 
+                   ),            # school effects)
                    vline.color = "red")
 
 
@@ -679,21 +689,80 @@ performance::icc(m_cohesion_3c)
 
 performance::r2(m_cohesion_3c)
 
-# Model estimates plots
 
-sjPlot::plot_model(m_suscept_2b, 
-                   sort.est=T,
-                   vline.color = "red")
+# Model estimates plots (only important ones)
 
-ggsave("figures/regression-plots/m-suscept-2b.png",
-       width = 7, height = 5, dpi = 300)
+theme_set(theme_sjplot())
 
-sjPlot::plot_model(m_cohesion_3c, 
-                   sort.est=T,
-                   vline.color = "red")
+terms_cohesion_keep <- c(
+  # 3-way interactions 
+  "grouppositive_norm:blockpost:cohesion_z",
+  "groupnegative_norm:blockpost:cohesion_z",
+  "grouppositive_norm:targetclimate:cohesion_z",
+  "groupnegative_norm:targetclimate:cohesion_z",
+  "grouppositive_norm:targetprosocial:cohesion_z",
+  "groupnegative_norm:targetprosocial:cohesion_z",
+  "blockpost:targetclimate:cohesion_z",
+  "blockpost:targetprosocial:cohesion_z",
+  
+  # 2-way interactions
+  "grouppositive_norm:cohesion_z",
+  "groupnegative_norm:cohesion_z",
+  "blockpost:cohesion_z",
+  "targetclimate:cohesion_z",
+  "targetprosocial:cohesion_z",
+  
+  # main effect
+  
+  "cohesion_z"
+  
+)
 
+p_cohesion_3c <- sjPlot::plot_model(
+  m_cohesion_3c,
+  type = "est",
+  terms = terms_cohesion_keep,   # <- this is what removes stuff
+  sort.est = FALSE,              # <- respects your order above
+  show.intercept = FALSE,
+  vline.color = "red"
+)
+
+p_cohesion_3c
 
 ggsave("figures/regression-plots/m-cohesion-3c.png",
-       width = 7, height = 5, dpi = 300)
+       plot = p_cohesion_3c, width = 7, height = 5, dpi = 300)
+
+theme_set(theme_sjplot())
+
+terms_suscept_keep <- c(
+  # 3-way interactions 
+  "grouppositive_norm:blockpost:susceptibility_c",
+  "groupnegative_norm:blockpost:susceptibility_c",
+  
+  # 2-way interactions 
+  
+  "grouppositive_norm:susceptibility_c",
+  "groupnegative_norm:susceptibility_c",
+  "blockpost:susceptibility_c",
+  
+  # main effects 
+  
+  "susceptibility_c"
+  
+)
+
+p_suscept_2b <- sjPlot::plot_model(
+  m_suscept_2b,
+  type = "est",
+  terms = terms_suscept_keep,
+  sort.est = FALSE,
+  show.intercept = FALSE,
+  vline.color = "red"
+)
+
+ggsave("figures/regression-plots/m-suscept-2b.png",
+       plot = p_suscept_2b, width = 7, height = 5, dpi = 300)
+
+
 
 message("Modeling and moderation analysis completed.")

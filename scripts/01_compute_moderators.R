@@ -135,40 +135,57 @@ fit_table(fit_minus4)
 dir.create("figures/sem-plots", recursive = TRUE, showWarnings = FALSE)
 
 
-# Visualize the measurement model
+# ONE FACTOR MODEL
 png("figures/sem-plots/semplot_onefactor.png", 
     width = 7, height = 5, res = 300,
     units = "in")
 
-semPaths(fit1,         # name of fitted model object 
-         what="std",      # display standardized parameter estimates
-         weighted=FALSE,  # do not weight plot features
-         nCharNodes=0)    # do not abbreviate names
+
+semPaths(
+  fit1,
+  what="std",      
+  weighted = FALSE,
+  intercepts = FALSE,    
+  sizeMan = 6,
+  sizeLat = 11,           
+  label.cex = 1.1,       
+  nCharNodes = 0)   
+
 
 dev.off()
 
-# Visualize the measurement model
+# TWO FACTOR MODEL 
+
 png("figures/sem-plots/semplot_twofactor.png", width = 7, height = 5, res = 300,
     units = "in")
 
 semPaths(fit2,         
          what="std",      
-         weighted=FALSE,  
-         nCharNodes=0)    
+         weighted = FALSE,
+         intercepts = FALSE,    
+         sizeMan = 6,
+         sizeLat = 11,           
+         label.cex = 1.1,       
+         nCharNodes = 0)     
 
 
 dev.off()
 
-# Visualize 
-dir.create("figures/sem-plots", recursive = TRUE, showWarnings = FALSE)
+# ONE FACTOR MODEL MODEL (WITHOUT ITEM 2)
+png("figures/sem-plots/semplot_minus2.png", width = 7, height = 5, res = 300,
+    units = "in")
 
-png("figures/sem-plots/semplot_onefactor.png", 7, 5, units="in", res=300)
-semPaths(fit1, what="std", weighted=FALSE, nCharNodes=0)
+semPaths(fit_minus2,       
+         what="std",      
+         weighted = FALSE,
+         intercepts = FALSE,    
+         sizeMan = 6,
+         sizeLat = 11,           
+         label.cex = 1.1,       
+         nCharNodes = 0)    
+
 dev.off()
 
-png("figures/sem-plots/semplot_twofactor.png", 7, 5, units="in", res=300)
-semPaths(fit2, what="std", weighted=FALSE, nCharNodes=0)
-dev.off()
 
 
 ## --- Social Cohesion (Network) --- ##
