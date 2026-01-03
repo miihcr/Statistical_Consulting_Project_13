@@ -452,6 +452,12 @@ data$avg_outdegree_c     <- as.numeric(scale(data$avg_outdegree, center = TRUE, 
 data$cohesion_capped_c   <- as.numeric(scale(data$cohesion_capped, center = TRUE, scale = FALSE))
 data$susceptibility_c    <- as.numeric(scale(data$susceptibility, center = TRUE, scale = FALSE))
 
+# Descriptives
+summary(network_summary$cohesion_capped)
+
+sd(network_summary$cohesion_capped, na.rm = TRUE)
+cor.test(network_summary$n_nodes, network_summary$cohesion_capped)
+
 # Save
 saveRDS(
   data,
