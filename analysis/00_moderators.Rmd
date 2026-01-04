@@ -168,7 +168,7 @@ CFA indicates that 2-factor model is significantly better (chi-sq difference tes
 
 
 # Visualize the measurement model
-png("figures/sem-plots/semplot_onefactor.png", width = 7, height = 5, res = 300,
+png(p_fig("sem-plots", "semplot_onefactor.png"), width = 7, height = 5, res = 300,
     units = "in")
 
 semPaths(fit1,         # name of fitted model object 
@@ -179,7 +179,7 @@ semPaths(fit1,         # name of fitted model object
 dev.off()
 
 # Visualize the measurement model
-png("figures/sem-plots/semplot_twofactor.png", width = 7, height = 5, res = 300,
+png(p_fig("sem-plots", "semplot_twofactor.png"), width = 7, height = 5, res = 300,
     units = "in")
 
 semPaths(fit2,         
@@ -191,7 +191,7 @@ semPaths(fit2,
 dev.off()
 
 # ONE FACTOR MODEL MODEL (WITHOUT ITEM 2)
-png("figures/sem-plots/semplot_minus2.png", width = 7, height = 5, res = 300,
+png(p_fig("sem-plots", "semplot_minus2.png"), width = 7, height = 5, res = 300,
     units = "in")
 
 semPaths(fit_minus2,       
@@ -454,15 +454,13 @@ data$susceptibility_c    <- as.numeric(scale(data$susceptibility, center = TRUE,
 
 # Descriptives
 summary(network_summary$cohesion_capped)
-
 sd(network_summary$cohesion_capped, na.rm = TRUE)
-cor.test(network_summary$n_nodes, network_summary$cohesion_capped)
+cor.test(network_summary$n_nodes, network_summary$cohesion_capped) # support that it is size-invariant 
 
 # Save
-saveRDS(
-  data,
-  here::here("data", "processed", "data2_incl_moderation.rds")
-)
+saveRDS(data, p_processed("data2_incl_moderation.rds"))
+
+saveRDS(network_summary, p_processed("network_summary.rds"))
 
 
 ```

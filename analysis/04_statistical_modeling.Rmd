@@ -9,21 +9,10 @@ output: pdf_document
 
 source(here::here("scripts","_common.R"), local = knitr::knit_global())
 
-df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
-df_long <- readRDS(here::here("data","processed","df_long.rds"))
+df_long <- readRDS(p_processed("df_long.rds"))
 
-df_long <- df_long |>
-  mutate(
-    group  = relevel(group,  ref = "control"),
-    target = relevel(target, ref = "self"),
-    effort = relevel(effort, ref = "40%"),
-    block  = relevel(block,  ref = "pre")
-  )
 
-options(contrasts = c("contr.treatment", "contr.poly"))
-
-ctrl <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
-
+ctrl <- lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
 
 ```
 
@@ -45,7 +34,7 @@ m0 <- glmer(
   choice ~ 1 + (1 | ppn),  
   data = df_long, 
   family = binomial, 
-  control = ctrl
+  control = ctrl 
 )
 
 
@@ -54,7 +43,7 @@ m1_with_class <- glmer(
     (1 | ppn) + (1 | class),
   data = df_long, 
   family = binomial, 
-  control = ctrl
+  control = ctrl 
 )
 
 
@@ -63,7 +52,7 @@ m1_without_class <- glmer(
     (1 | ppn),
   data = df_long, 
   family = binomial, 
-  control = ctrl
+  control = ctrl 
 )
 
 
@@ -86,7 +75,7 @@ Decision: Use model without class random intercept.
 m_rslopes <- glmer(
   choice ~ target*group*block + reward*effort + school +
     (1 + block | ppn),
-  data = df_long, family = binomial, control = ctrl
+  data = df_long, family = binomial, control = ctrl 
 )
 
 # Compare models
@@ -113,7 +102,7 @@ m_full <- glmer(
     (1 + block | ppn),
   data = df_long, 
   family = binomial, 
-  control = ctrl
+  control = ctrl 
 )
 
 # Model without three-way interaction (only two-way)
@@ -124,7 +113,7 @@ m_no_3way <- glmer(
     (1 + block | ppn),
   data = df_long, 
   family = binomial, 
-  control = ctrl
+  control = ctrl 
 )
 
 
@@ -141,6 +130,9 @@ The 3-way interaction is not significant, but given that the research question r
 ```{r}
 
 final_model <- m_full
+
+saveRDS(final_model, p_processed("models", "final_model_RQ1.rds")) # save model
+
 
 # Check singularity
 isSingular(final_model)
@@ -190,6 +182,8 @@ or_table_display$p_value <- round(or_table_display$p_value, 4)
 
 print(or_table_display)
 
+saveRDS(or_table_display, p_processed("results", "or_table_RQ1.rds"))
+
 
 theme_set(theme_sjplot())
 sjPlot::plot_model(m_full,
@@ -208,9 +202,8 @@ sjPlot::plot_model(m_full,
 
 
 
-ggsave("figures/regression-plots/model-estimates.png",
+ggsave(p_fig("regression-plots", "model-estimates.png"),
        width = 7, height = 5, dpi = 300)
-
 
 
 
@@ -254,12 +247,7 @@ plot_re <- plot(gg_re) +
     x = "Reward (points)"
   ) +
   theme_bw() +
-  scale_y_continuous(limits = c(1, 0))
-
-
-ggsave("figures/regression-plots/reward_effort_interaction.png",  
-       plot = plot_re,
-       width = 7, height = 5, dpi = 300)
+  scale_y_continuous(limits = c(0,1))
 
 
 # 4. 2. Target $\times$ Group interaction (Exploratory)
@@ -280,11 +268,7 @@ plot_tg <- plot(gg_tg) +
     color = "Group"
   ) +
   theme_bw() +
-  scale_y_continuous(limits = c(1, 0))
-
-ggsave("figures/regression-plots/target_group_interaction.png",  
-       plot = plot_tg,
-       width = 7, height = 5, dpi = 300)
+  scale_y_continuous(limits = c(0,1))
 
 # 4.3 Block × Group × Target (Primary hypothesis display)
 
@@ -327,11 +311,16 @@ plot_3way <- plot(gg_3way) +
   scale_y_continuous(limits = c(0.85, 1.0)) +  # Show the ceiling
   geom_hline(yintercept = 0.92, linetype = "dashed", color = "red", alpha = 0.5)
 
+# save all
 
+ggsave(p_fig("regression-plots", "reward_effort_interaction.png"),
+       plot = plot_re, width = 7, height = 5, dpi = 300)
 
-ggsave("figures/regression-plots/three_way_interaction_primary_hypothesis.png",  
-       plot = plot_3way,
-       width = 7, height = 5, dpi = 300)
+ggsave(p_fig("regression-plots", "target_group_interaction.png"),
+       plot = plot_tg, width = 7, height = 5, dpi = 300)
+
+ggsave(p_fig("regression-plots", "three_way_interaction_primary_hypothesis.png"),
+       plot = plot_3way, width = 7, height = 5, dpi = 300)
 
 
 ```
@@ -392,19 +381,17 @@ w <- 7
 h <- 5
 dpi <- 300
 
-# Main dharma plot
+# Plots 
 
-png("figures/diagnostics/dharma_main.png", width = w, height = h, units = "in", res = dpi)
+png(p_fig("diagnostics", "dharma_main.png"), width = w, height = h, units = "in", res = dpi)
 plot(sim)
 dev.off()
 
-
-png("figures/diagnostics/dharma_random.png", width = w, height = h, units = "in", res = dpi)
+png(p_fig("diagnostics", "dharma_random.png"), width = w, height = h, units = "in", res = dpi)
 plot(sim_ppn)
 dev.off()
 
-
-png("figures/diagnostics/lattice_random.png", width = w, height = h, units = "in", res = dpi)
+png(p_fig("diagnostics", "lattice_random.png"), width = w, height = h, units = "in", res = dpi)
 randoms1 <- ranef(final_model)
 lattice::qqmath(randoms1)
 dev.off()
@@ -490,8 +477,12 @@ m_suscept_2d <- glmmTMB(
 print(anova(m_suscept_2a, m_suscept_2b, m_suscept_2c, m_suscept_2d))
 
 m_suscept_final <- m_suscept_2b
+
+saveRDS(m_suscept_final, p_processed("models", "m_suscept_final.rds"))
+
 summary(m_suscept_final)
 sjPlot::tab_model(m_suscept_final)
+
 
 ```
 
@@ -624,8 +615,12 @@ m_cohesion_3d <- glmmTMB(
 
 print(anova(m_cohesion_3a, m_cohesion_3b, m_cohesion_3c, m_cohesion_3d))
 
-summary(m_cohesion_3a)
-sjPlot::tab_model(m_cohesion_3a)
+m_cohesion_final <- m_cohesion_3a
+
+summary(m_cohesion_final)
+sjPlot::tab_model(m_cohesion_final)
+
+
 ```
 
 ##### Model Diagnostics
@@ -635,7 +630,7 @@ sjPlot::tab_model(m_cohesion_3a)
 #  Simulate DHARMa residuals
 
 sim_coh <- simulateResiduals(
-  fittedModel = m_cohesion_3a,
+  fittedModel = m_cohesion_final,
   n = 1000,
   plot = FALSE
 )
@@ -656,11 +651,12 @@ testOutliers(sim_coh)     # OK if significant for GLMMs, consider type="bootstra
 
 # Predictor-specific residual checks
 
-mf_coh <- model.frame(m_cohesion_3b) # because of NA values 
+mf_coh <- model.frame(m_cohesion_final) # because of NA values 
 
 
-plotResiduals(sim_coh, mf_coh$target_coh, main = "Residuals vs. Target")
-plotResiduals(sim_coh, mf_coh$group_coh, main = "Residuals vs. Group")
+
+plotResiduals(sim_coh, mf_coh$target, main = "Residuals vs. Target")
+plotResiduals(sim_coh, mf_coh$group,  main = "Residuals vs. Group")
 plotResiduals(sim_coh, mf_coh$block, main = "Residuals vs. Block")
 plotResiduals(sim_coh, mf_coh$reward, main = "Residuals vs. Reward")
 plotResiduals(sim_coh, mf_coh$effort, main = "Residuals vs. Effort")
@@ -673,26 +669,26 @@ plot(sim_ppn_coh)
 testDispersion(sim_ppn_coh)
 
 
-performance::icc(m_cohesion_3a)
+performance::icc(m_cohesion_final)
 
-performance::r2(m_cohesion_3a)
+performance::r2(m_cohesion_final)
 
 # Model estimates plots (only important ones)
 
 theme_set(theme_sjplot())
 
-p_cohesion_3a <- sjPlot::plot_model(
-  m_cohesion_3a,
+p_cohesion_final <- sjPlot::plot_model(
+  m_cohesion_final,
   type = "est",   # <- this is what removes stuff
   sort.est = FALSE,              # <- respects your order above
   show.intercept = FALSE,
   vline.color = "red"
 )
 
-p_cohesion_3a
+p_cohesion_final
 
-ggsave("figures/regression-plots/m-cohesion-3a.png",
-       plot = p_cohesion_3a, width = 7, height = 5, dpi = 300)
+ggsave(p_fig("regression-plots", "m-cohesion-final.png"),
+       plot = p_cohesion_final, width = 7, height = 5, dpi = 300)
 
 theme_set(theme_sjplot())
 
@@ -713,7 +709,7 @@ terms_suscept_keep <- c(
 
 )
 
-p_suscept_2b <- sjPlot::plot_model(
+p_suscept_final <- sjPlot::plot_model(
   m_suscept_2b,
   type = "est",
   terms = terms_suscept_keep,
@@ -722,8 +718,8 @@ p_suscept_2b <- sjPlot::plot_model(
   vline.color = "red"
 )
 
-ggsave("figures/regression-plots/m-suscept-2b.png",
-       plot = p_suscept_2b, width = 7, height = 5, dpi = 300)
+ggsave(p_fig("regression-plots", "m-suscept-final.png"),
+       plot = p_suscept_final, width = 7, height = 5, dpi = 300)
 
 
 

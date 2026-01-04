@@ -9,8 +9,8 @@ output: pdf_document
 
 source(here::here("scripts","_common.R"), local = knitr::knit_global())
 
-df_wide <- readRDS(here::here("data","processed","df_wide.rds"))
-df_long <- readRDS(here::here("data","processed","df_long.rds"))
+df_wide <- readRDS(p_processed("df_wide.rds"))
+df_long <- readRDS(p_processed("df_long.rds"))
 
 
 ```
@@ -28,15 +28,6 @@ pal_target <- c(
 "prosocial" = "#4E79A7"
 )
 
-pal_group <- c(
-"control"       = "#4E79A7",
-"positive_norm" = "#59A14F",
-"negative_norm" = "#E15759"
-)
-
-
-
-pd <- position_dodge(width = 0.7)
 
 
 group_labels <- c(
@@ -98,49 +89,64 @@ df_wide |>
 
 ```{r}
 # Overall choice rates
-df_long |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    n_missing = sum(is.na(choice)),
-    mean_choice = mean(choice, na.rm = TRUE),
-    sd_choice = sd(choice, na.rm = TRUE)
-  )
+
+desc_overall <- df_long |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+n_missing = sum(is.na(choice)),
+mean_choice = mean(choice, na.rm = TRUE),
+sd_choice = sd(choice, na.rm = TRUE)
+)
 
 # By target type
-df_long |> 
-  group_by(target) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    n_missing = sum(is.na(choice)),
-    mean_choice = mean(choice, na.rm = TRUE),
-    sd_choice = sd(choice, na.rm = TRUE)
-  )
+desc_by_target <- df_long |>
+group_by(target) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+n_missing = sum(is.na(choice)),
+mean_choice = mean(choice, na.rm = TRUE),
+sd_choice = sd(choice, na.rm = TRUE),
+.groups = "drop"
+)
 
-# By group and block (most important!)
-df_long |> 
-  group_by(group, block) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    n_missing = sum(is.na(choice)),
-    mean_choice = mean(choice, na.rm = TRUE),
-    sd_choice = sd(choice, na.rm = TRUE),
-    .groups = "drop"
-  )
+# By group and block 
+
+desc_by_group_block <- df_long |>
+group_by(group, block) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+n_missing = sum(is.na(choice)),
+mean_choice = mean(choice, na.rm = TRUE),
+sd_choice = sd(choice, na.rm = TRUE),
+.groups = "drop"
+)
 
 # By all three factors 
-df_long |> 
-  group_by(target, group, block) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    M = mean(choice, na.rm = TRUE),
-    SD = sd(choice, na.rm = TRUE),
-    .groups = "drop"
-  ) |> 
-  arrange(target, group, block)
+desc_3way <- df_long |>
+group_by(target, group, block) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+M = mean(choice, na.rm = TRUE),
+SD = sd(choice, na.rm = TRUE),
+.groups = "drop"
+) |>
+arrange(target, group, block)
+
+desc_overall
+desc_by_target
+desc_by_group_block
+desc_3way
+
+# Save all tables 
+
+saveRDS(desc_overall, p_processed("results", "desc_overall.rds"))
+saveRDS(desc_by_target, p_processed("results", "desc_by_target.rds"))
+saveRDS(desc_by_group_block, p_processed("results", "desc_by_group_block.rds"))
+saveRDS(desc_3way, p_processed("results", "desc_3way.rds"))
 
 
 ```
@@ -151,59 +157,71 @@ df_long |>
 ```{r}
 
 # Choice rates by reward level
-df_long |> 
-  group_by(reward) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    mean_choice = mean(choice, na.rm = TRUE),
-    sd_choice = sd(choice, na.rm = TRUE)
-  )
+desc_by_reward <- df_long |>
+group_by(reward) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+mean_choice = mean(choice, na.rm = TRUE),
+sd_choice = sd(choice, na.rm = TRUE),
+.groups = "drop"
+)
+
 
 # Choice rates by effort level
-df_long |> 
-  group_by(effort) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    mean_choice = mean(choice, na.rm = TRUE),
-    sd_choice = sd(choice, na.rm = TRUE)
-  )
+desc_by_effort <- df_long |>
+group_by(effort) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+mean_choice = mean(choice, na.rm = TRUE),
+sd_choice = sd(choice, na.rm = TRUE),
+.groups = "drop"
+)
 
 # Reward × Effort interaction pattern
-df_long |> 
-  group_by(reward, effort) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    mean_choice = mean(choice, na.rm = TRUE),
-    sd_choice = sd(choice, na.rm = TRUE),
-    .groups = "drop"
-  )
+desc_reward_effort <- df_long |>
+group_by(reward, effort) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+mean_choice = mean(choice, na.rm = TRUE),
+sd_choice = sd(choice, na.rm = TRUE),
+.groups = "drop"
+)
 
+desc_by_reward
+desc_by_effort
+desc_reward_effort
+
+# Save all tables
+
+saveRDS(desc_by_reward, p_processed("results", "desc_by_reward.rds"))
+saveRDS(desc_by_effort, p_processed("results", "desc_by_effort.rds"))
+saveRDS(desc_reward_effort, p_processed("results", "desc_reward_effort.rds"))
 ```
 
 ## 4. Moderator Variables
 
 ```{r}
 
-sus_scores <- df_wide |> 
-  select(starts_with("SUS_")) |>
-  mutate(across(everything(), as.numeric))
+sus_scores <- df_wide |>
+select(starts_with("SUS_")) |>
+mutate(across(everything(), as.numeric))
 
+alpha_out <- psych::alpha(sus_scores, use = "pairwise")$total
+omega_tot <- psych::omega(sus_scores, use = "pairwise")$omega.tot
 
-# Reliability
-psych::alpha(sus_scores, use = "pairwise")$total# alpha
-psych::omega(sus_scores, use = "pairwise")$omega.tot # omega total
+SUS_total <- rowMeans(sus_scores, na.rm = TRUE)
 
+sus_desc <- psych::describe(SUS_total)
 
-# Total score 
+alpha_out
+omega_tot
+sus_desc
 
-SUS_total <- rowMeans(sus_scores, na.rm=TRUE)
+saveRDS(sus_desc, p_processed("results", "sus_total_descriptives.rds"))
 
-describe(SUS_total) # descriptives for SUS
-
-hist(SUS_total)
 
 
 ```
@@ -214,181 +232,166 @@ hist(SUS_total)
 
 
 # By participant overall
-ceiling_participants <- df_long |> 
-  group_by(ppn) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    prop_high_effort = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_)
-  ) |> 
-  filter(!is.na(prop_high_effort)) |>  # Remove participants with no valid data
-  summarise(
-    n_participants = n(),
-    at_90 = sum(prop_high_effort >= 0.90),
-    pct_90 = mean(prop_high_effort >= 0.90) * 100,
-    at_95 = sum(prop_high_effort >= 0.95),
-    pct_95 = mean(prop_high_effort >= 0.95) * 100,
-    at_100 = sum(prop_high_effort == 1.00),
-    pct_100 = mean(prop_high_effort == 1.00) * 100
-  )
-print(ceiling_participants)
+participant_props <- df_long |>
+group_by(ppn) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+prop_high_effort = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_),
+.groups = "drop"
+) |>
+filter(!is.na(prop_high_effort))
+
+
+ceiling_participants <- participant_props |>
+summarise(
+n_participants = n(),
+at_90 = sum(prop_high_effort >= 0.90),
+pct_90 = mean(prop_high_effort >= 0.90) * 100,
+at_95 = sum(prop_high_effort >= 0.95),
+pct_95 = mean(prop_high_effort >= 0.95) * 100,
+at_100 = sum(prop_high_effort == 1.00),
+pct_100 = mean(prop_high_effort == 1.00) * 100
+)
+
+ceiling_participants
+
 
 # By participant and block
-ceiling_by_block <- df_long |> 
-  group_by(ppn, block) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    prop_high_effort = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_),
-    .groups = "drop"
-  ) |> 
-  filter(!is.na(prop_high_effort)) |>  # Remove participants with no valid data in that block
-  group_by(block) |> 
-  summarise(
-    n_participants = n(),
-    n_at_90 = sum(prop_high_effort >= 0.90),
-    pct_at_90 = mean(prop_high_effort >= 0.90) * 100,
-    n_at_95 = sum(prop_high_effort >= 0.95),
-    pct_at_95 = mean(prop_high_effort >= 0.95) * 100,
-    n_at_100 = sum(prop_high_effort == 1.00),
-    pct_at_100 = mean(prop_high_effort == 1.00) * 100
-  )
-print(ceiling_by_block)
+ceiling_by_block <- df_long |>
+group_by(ppn, block) |>
+summarise(
+n_trials = n(),
+n_valid = sum(!is.na(choice)),
+prop_high_effort = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_),
+.groups = "drop"
+) |>
+filter(!is.na(prop_high_effort)) |>
+group_by(block) |>
+summarise(
+n_participants = n(),
+n_at_90 = sum(prop_high_effort >= 0.90),
+pct_at_90 = mean(prop_high_effort >= 0.90) * 100,
+n_at_95 = sum(prop_high_effort >= 0.95),
+pct_at_95 = mean(prop_high_effort >= 0.95) * 100,
+n_at_100 = sum(prop_high_effort == 1.00),
+pct_at_100 = mean(prop_high_effort == 1.00) * 100,
+.groups = "drop"
+)
 
+ceiling_by_block
 
-# 1. Compute each participant's high-effort proportion
+# Distribution plot (discretize to 36 trials)
 
-participant_props <- df_long |> 
-  group_by(ppn) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    prop_high_effort = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_),
-    .groups = "drop"
-  ) |> 
-  filter(!is.na(prop_high_effort))
+plot_data <- participant_props |>
+mutate(prop_disc = round(prop_high_effort * 36) / 36) |>
+count(prop_disc)
 
-# 2. Convert proportions to discrete 36-step values
-plot_data <- participant_props |> 
-  mutate(
-    prop_disc = round(prop_high_effort * 36) / 36
-  ) |> 
-  count(prop_disc)
-
-# 3. Define a threshold  for visualizing ceiling effects
 threshold <- 0.90
 
-# 4. Plot
-ggplot(plot_data, aes(x = prop_disc, y = n)) +
-  geom_col(fill = "steelblue") +
-  scale_x_continuous(
-    breaks = plot_data$prop_disc,
-    labels = scales::percent_format(accuracy = 1)
-  ) +
-  scale_y_continuous(
-    breaks = seq(0, max(plot_data$n), by = 10)
-  ) +
-  geom_vline(xintercept = threshold, linetype = "dashed", color = "red") +
-  annotate(
-    "text",
-    x = threshold,
-    y = max(plot_data$n) * 0.95,     # ensures text stays inside plot area
-    label = "90% threshold",
-    color = "red",
-    hjust = -0.1
-  ) +
-  labs(
-    x = "Proportion of high-effort choices (all 36 trials)",
-    y = "Number of participants"
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+p_ceiling <- ggplot(plot_data, aes(x = prop_disc, y = n)) +
+geom_col() +
+scale_x_continuous(
+breaks = plot_data$prop_disc,
+labels = scales::percent_format(accuracy = 1)
+) +
+scale_y_continuous(
+breaks = seq(0, max(plot_data$n), by = 10)
+) +
+geom_vline(xintercept = threshold, linetype = "dashed") +
+annotate(
+"text",
+x = threshold,
+y = max(plot_data$n) * 0.95,
+label = "90% threshold",
+hjust = -0.1
+) +
+labs(
+x = "Proportion of high-effort choices (all 36 trials)",
+y = "Number of participants"
+) +
+theme_minimal(base_size = 14) +
+theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("figures/descriptives/figure1_ceiling_distribution.png", width = 7, 
-       height = 5, dpi = 300)
+p_ceiling
 
-
-# Descriptives
-summary(participant_props$prop_high_effort)
-quantile(participant_props$prop_high_effort, probs = c(0.25, 0.5, 0.75))
-
-# How many chose high effort 100% of the time?
-sum(participant_props$prop_high_effort == 1.0)
-mean(participant_props$prop_high_effort == 1.0) * 100
+ggsave(
+p_fig("descriptives", "figure1_ceiling_distribution.png"),
+plot = p_ceiling,
+width = 7, height = 5, dpi = 300
+)
 
 
-# Standard deviation of choices (within-person)
-within_person_variability <- df_long |> 
-  group_by(ppn) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    sd_choice = if_else(n_valid > 1, sd(choice, na.rm = TRUE), NA_real_),
-    var_choice = if_else(n_valid > 1, var(choice, na.rm = TRUE), NA_real_)
-  ) |> 
-  filter(!is.na(sd_choice)) |>  # Remove participants with insufficient data
-  summarise(
-    n_participants = n(),
-    mean_sd = mean(sd_choice),
-    median_sd = median(sd_choice),
-    n_zero_var = sum(sd_choice == 0),
-    pct_zero_var = mean(sd_choice == 0) * 100
-  )
-print(within_person_variability)
+# Summary stats
 
-# Ceiling by experimental conditions
-ceiling_by_group <- df_long |> 
-  group_by(ppn, group) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    prop_high_effort = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_),
-    .groups = "drop"
-  ) |> 
-  filter(!is.na(prop_high_effort)) |>  # Remove participants with no valid data
-  group_by(group) |> 
-  summarise(
-    n_participants = n(),
-    n_at_90 = sum(prop_high_effort >= 0.90),
-    pct_at_90 = mean(prop_high_effort >= 0.90) * 100,
-    mean_prop = mean(prop_high_effort),
-    sd_prop = sd(prop_high_effort),
-    median_prop = median(prop_high_effort)
-  )
-print(ceiling_by_group)
 
-# summary table
-ceiling_summary <- df_long |> 
-  group_by(ppn) |> 
-  summarise(
-    n_trials = n(),
-    n_valid = sum(!is.na(choice)),
-    prop = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_),
-    sd = if_else(n_valid > 1, sd(choice, na.rm = TRUE), NA_real_)
-  ) |> 
-  filter(!is.na(prop)) |>  # Remove participants with no valid data
-  summarise(
-    n_participants = n(),
-    mean = mean(prop),
-    sd = sd(prop),
-    median = median(prop),
-    q25 = quantile(prop, 0.25),
-    q75 = quantile(prop, 0.75),
-    min = min(prop),
-    max = max(prop),
-    n_90 = sum(prop >= 0.90),
-    pct_90 = mean(prop >= 0.90) * 100,
-    n_95 = sum(prop >= 0.95),
-    pct_95 = mean(prop >= 0.95) * 100,
-    n_100 = sum(prop == 1.00),
-    pct_100 = mean(prop == 1.00) * 100,
-    mean_within_sd = mean(sd, na.rm = TRUE),
-    n_zero_var = sum(sd == 0, na.rm = TRUE),
-    pct_zero_var = mean(sd == 0, na.rm = TRUE) * 100
-  )
-print(ceiling_summary)
+ceiling_summary <- participant_props |>
+summarise(
+n_participants = n(),
+mean = mean(prop_high_effort),
+sd = sd(prop_high_effort),
+median = median(prop_high_effort),
+q25 = quantile(prop_high_effort, 0.25),
+q75 = quantile(prop_high_effort, 0.75),
+min = min(prop_high_effort),
+max = max(prop_high_effort),
+n_90 = sum(prop_high_effort >= 0.90),
+pct_90 = mean(prop_high_effort >= 0.90) * 100,
+n_95 = sum(prop_high_effort >= 0.95),
+pct_95 = mean(prop_high_effort >= 0.95) * 100,
+n_100 = sum(prop_high_effort == 1.00),
+pct_100 = mean(prop_high_effort == 1.00) * 100
+)
+
+ceiling_summary
+saveRDS(ceiling_summary, p_processed("results", "ceiling_summary.rds"))
+
+
+# Within person variability (sd of choice)
+
+within_person_variability <- df_long |>
+group_by(ppn) |>
+summarise(
+n_valid = sum(!is.na(choice)),
+sd_choice = if_else(n_valid > 1, sd(choice, na.rm = TRUE), NA_real_),
+.groups = "drop"
+) |>
+filter(!is.na(sd_choice)) |>
+summarise(
+n_participants = n(),
+mean_sd = mean(sd_choice),
+median_sd = median(sd_choice),
+n_zero_var = sum(sd_choice == 0),
+pct_zero_var = mean(sd_choice == 0) * 100
+)
+
+within_person_variability
+saveRDS(within_person_variability, p_processed("results", "within_person_variability.rds"))
+
+# Ceiling by conditions
+
+ceiling_by_group <- df_long |>
+group_by(ppn, group) |>
+summarise(
+n_valid = sum(!is.na(choice)),
+prop_high_effort = if_else(n_valid > 0, mean(choice, na.rm = TRUE), NA_real_),
+.groups = "drop"
+) |>
+filter(!is.na(prop_high_effort)) |>
+group_by(group) |>
+summarise(
+n_participants = n(),
+n_at_90 = sum(prop_high_effort >= 0.90),
+pct_at_90 = mean(prop_high_effort >= 0.90) * 100,
+mean_prop = mean(prop_high_effort),
+sd_prop = sd(prop_high_effort),
+median_prop = median(prop_high_effort),
+.groups = "drop"
+)
+
+ceiling_by_group
+saveRDS(ceiling_by_group, p_processed("results", "ceiling_by_group.rds"))
+
 ```
 
 
@@ -421,10 +424,11 @@ reward_effort_plot <- plot_a_data |>
 
 
 
-ggsave("figures/descriptives/reward_effort_plot.png",  
-       plot = reward_effort_plot,
-       width = 7, height = 5, dpi = 300)
-
+ggsave(
+p_fig("descriptives", "reward_effort_plot.png"),
+plot = reward_effort_plot,
+width = 7, height = 5, dpi = 300
+)
 
 ```
 
@@ -462,9 +466,11 @@ target_block_group_plot <- plot_b_data |>
     legend.title    = element_blank()
   )
 
-ggsave("figures/descriptives/target_block_group_plot.png",  
-       plot = target_block_group_plot,
-       width = 7, height = 5, dpi = 300)
+ggsave(
+p_fig("descriptives", "target_block_group_plot.png"),
+plot = target_block_group_plot,
+width = 7, height = 5, dpi = 300
+)
 
 
 # Adjusting y axis to zoom in on the effect
@@ -491,7 +497,10 @@ zoomed_target_block_group_plot <- plot_b_data |>
     legend.title    = element_blank()
   )
 
-ggsave("figures/descriptives/zoomed_target_block_group_plot.png",
-       width = 7, height = 5, dpi = 300)
+ggsave(
+p_fig("descriptives", "zoomed_target_block_group_plot.png"),
+plot = zoomed_target_block_group_plot,
+width = 7, height = 5, dpi = 300
+)
 
 ```

@@ -4,9 +4,9 @@
 pkgs <- c(
   "dplyr", "tidyr", "stringr", "ggplot2", "here", "readr",
   "ggthemes", "glmmTMB", "effectsize", "sjPlot", "semPlot",
-  "lme4", "lmerTest", "emmeans","ggeffects", "DHARMa",
+  "lme4", "lmerTest", "emmeans", "ggeffects", "DHARMa",
   "performance", "igraph", "lavaan", "purrr", "psych", "knitr",
-  "mice", "VIM", "naniar", "gtsummary"
+  "mice", "VIM", "naniar", "gtsummary", "tidyselect"
 )
 
 for (pkg in pkgs) {
@@ -16,8 +16,6 @@ for (pkg in pkgs) {
 }
 
 # Resolve masking issues
-library(dplyr)
-library(tidyselect)
 
 select      <- dplyr::select
 filter      <- dplyr::filter
@@ -35,15 +33,29 @@ if (requireNamespace("knitr", quietly = TRUE)) {
 
 theme_set(ggplot2::theme_minimal())
 
-# Ensure processed folder exists
-dir.create(here::here("data", "processed"), recursive = TRUE, showWarnings = FALSE)
+# ---- Project paths + output folders ----
+p_fig <- function(...) here::here("figures", ...)
+p_processed <- function(...) here::here("data", "processed", ...)
 
+# Ensure common output folders exist
+dir.create(p_fig(), recursive = TRUE, showWarnings = FALSE)
+dir.create(p_processed(), recursive = TRUE, showWarnings = FALSE)
+
+# folders for saved outputs
+dir.create(p_processed("models"), recursive = TRUE, showWarnings = FALSE)
+dir.create(p_processed("results"), recursive = TRUE, showWarnings = FALSE)
+
+# ---- Processed data loader ----
 load_processed <- function() {
-  fw <- here::here("data", "processed", "df_wide.rds")
-  fl <- here::here("data", "processed", "df_long.rds")
+  fw <- p_processed("df_wide.rds")
+  fl <- p_processed("df_long.rds")
+  
+  if (!file.exists(fw)) stop("Missing processed file: ", fw)
+  if (!file.exists(fl)) stop("Missing processed file: ", fl)
+  
   list(
-    df_wide = if (file.exists(fw)) readRDS(fw) else NULL,
-    df_long = if (file.exists(fl)) readRDS(fl) else NULL
+    df_wide = readRDS(fw),
+    df_long = readRDS(fl)
   )
 }
 
@@ -52,3 +64,5 @@ load_processed_data <- function(assign_global = FALSE) {
   if (assign_global) list2env(data_list, envir = .GlobalEnv)
   invisible(data_list)
 }
+
+

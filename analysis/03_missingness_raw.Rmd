@@ -1,16 +1,27 @@
-# 04_missingness
+---
+title: "Missingness"
+author: "Milena Costa"
+date: "2025-11-17"
+output: pdf_document
+---
 
+```{r setup, include=FALSE}
+
+source(here::here("scripts","_common.R"), local = knitr::knit_global())
+knitr::opts_chunk$set(echo = TRUE)  
+
+# NOTE: Missingness is assessed on RAW data (before processing)
+df_wide <- read.csv(here::here("data","raw","data_2.csv"))
+
+
+
+```
 
 # Missing Data Analysis
 
-
-df_wide <- read.csv(here::here("data", "raw", "data_2.csv"))
-
-dir.create("figures/missingness", recursive = TRUE, showWarnings = FALSE)
-
-
-
 ## 1. Exploring missing data
+
+```{r}
 
 
 prop_miss(df_wide)
@@ -18,22 +29,22 @@ prop_miss(df_wide)
 print(miss_var_summary(df_wide), n=50) # Missingness per variable
 
 df_wide |> miss_case_summary() # Missingness per case
-
+ 
 aggr(df_wide, numbers = TRUE, prop = FALSE) # missing pattern
 
 
 
 missing_1 <- vis_miss(df_wide,
-                      sort_miss = TRUE)
+         sort_miss = TRUE)
 
 
 
-ggsave("figures/missingness/missingness_plot.png", 
-       missing_1, width = 7, height = 5, dpi = 300)
+ggsave(p_fig("missingness", "missingness_plot.png"), missing_1, width = 7, height = 5, dpi = 300)
+
 
 missing_2 <- gg_miss_var(df_wide)
 
-ggsave("figures/missingness/missingness_plot2.png", 
+ggsave(p_fig("missingness", "missingness_plot2.png"), 
        missing_2, width = 7, height = 5, dpi = 300)
 
 
@@ -47,11 +58,23 @@ missing_3 <- df_nab |>
   geom_boxplot()
 
 
-ggsave("figures/missingness/missingness_plot3.png", 
+ggsave(p_fig("missingness", "missingness_plot3.png"), 
        missing_3, width = 7, height = 5, dpi = 300)
 
+```
 
 # 2. Missing Data Mechanism
+
+
+MAR: missingness associated with observed variables (but not the missing 
+variable itself)
+MCAR: missingness not associated with any variables (observed or unobserved)
+MNAR: missingness associated with the unobserved (missing) values themselves
+
+Here we make some boxplots with a few variables:
+
+
+```{r}
 
 
 vis_miss(df_wide, sort_miss = TRUE)
@@ -92,9 +115,8 @@ plot_sus_na <- df_nab |>
   geom_boxplot()
 
 
-ggsave("figures/missingness/missingness_plot4.png", 
+ggsave(p_fig("missingness", "missingness_plot4.png"), 
        plot_sus_na, width = 7, height = 5, dpi = 300)
-
 
 # --- SUS scores --- #
 
@@ -141,4 +163,6 @@ df_nab |>
 
 
 
-message("Missingness diagnostics and plots created.")
+
+```
+
