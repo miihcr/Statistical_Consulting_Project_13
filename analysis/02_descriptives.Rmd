@@ -230,6 +230,12 @@ saveRDS(sus_desc, p_processed("results", "sus_total_descriptives.rds"))
 
 ```{r}
 
+# across trials 
+
+df_long |>
+  summarise(p_high_effort = mean(choice == 1, na.rm = TRUE)) * 100
+
+
 
 # By participant overall
 participant_props <- df_long |>
@@ -284,34 +290,36 @@ ceiling_by_block
 # Distribution plot (discretize to 36 trials)
 
 plot_data <- participant_props |>
-mutate(prop_disc = round(prop_high_effort * 36) / 36) |>
-count(prop_disc)
+  mutate(prop_disc = round(prop_high_effort * 36) / 36) |>
+  count(prop_disc)
 
 threshold <- 0.90
 
 p_ceiling <- ggplot(plot_data, aes(x = prop_disc, y = n)) +
-geom_col() +
-scale_x_continuous(
-breaks = plot_data$prop_disc,
-labels = scales::percent_format(accuracy = 1)
-) +
-scale_y_continuous(
-breaks = seq(0, max(plot_data$n), by = 10)
-) +
-geom_vline(xintercept = threshold, linetype = "dashed") +
-annotate(
-"text",
-x = threshold,
-y = max(plot_data$n) * 0.95,
-label = "90% threshold",
-hjust = -0.1
-) +
-labs(
-x = "Proportion of high-effort choices (all 36 trials)",
-y = "Number of participants"
-) +
-theme_minimal(base_size = 14) +
-theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  geom_col(fill = "#4E79A7", width = 1/36) +
+  scale_x_continuous(
+    breaks = seq(0, 1, by = 0.1),
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0, 1)
+  ) +
+  scale_y_continuous(
+    breaks = seq(0, max(plot_data$n), by = 10),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  geom_vline(xintercept = threshold, 
+             linetype = "dashed", 
+             color = "red", 
+             linewidth = 0.8) +
+  labs(
+    x = "Proportion of high-effort choices (all 36 trials)",
+    y = "Number of participants"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(color = "gray30")
+  )
 
 p_ceiling
 
