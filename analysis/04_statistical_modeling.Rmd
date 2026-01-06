@@ -538,6 +538,20 @@ performance::icc(m_suscept_final)
 
 performance::r2(m_suscept_final)
 
+
+# Save diagnostic plots
+
+w <- 7
+h <- 5
+dpi <- 300
+
+# Plots 
+
+png(p_fig("diagnostics", "dharma_sus.png"), width = w, height = h, units = "in", res = dpi)
+plot(sim_sus)
+dev.off()
+
+
 ```
 
 
@@ -673,7 +687,21 @@ performance::icc(m_cohesion_final)
 
 performance::r2(m_cohesion_final)
 
-# Model estimates plots (only important ones)
+# Save diagnostic plots
+
+w <- 7
+h <- 5
+dpi <- 300
+
+# Plots 
+
+png(p_fig("diagnostics", "dharma_coh.png"), width = w, height = h, units = "in", res = dpi)
+plot(sim_coh)
+dev.off()
+
+
+
+# Model estimates plots 
 
 theme_set(theme_sjplot())
 
