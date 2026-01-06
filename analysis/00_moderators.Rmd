@@ -319,8 +319,9 @@ for (cls in classes) {
   # Raw density 
   dens_raw <- edge_density(g, loops = FALSE)
   
-  avg_outdeg <- ifelse(n_nominators > 0, n_edges / n_nominators, NA)
-  capped_den <- ifelse(n_nominators > 0, avg_outdeg / max_outdegree, NA)
+  avg_outdeg <- ifelse(n_nodes > 0, n_edges / n_nodes, NA)
+  
+  capped_den <- ifelse(n_nodes > 0, n_edges / (max_outdegree * n_nodes), NA)
   
   rec <- reciprocity(g)
   trans <- transitivity(g, type = "global")
