@@ -532,9 +532,13 @@ m_cohesion_final <- glmmTMB(
   family = binomial
 )
 
+# Check classroom random effect variance
+VarCorr(m_cohesion_H5)
 
 summary(m_cohesion_final)
 sjPlot::tab_model(m_cohesion_final)
+
+
 
 ```
 
