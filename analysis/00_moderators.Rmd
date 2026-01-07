@@ -451,6 +451,7 @@ data <- merge(
 # Center variables
 data$avg_outdegree_c     <- as.numeric(scale(data$avg_outdegree, center = TRUE, scale = FALSE))
 data$cohesion_capped_c   <- as.numeric(scale(data$cohesion_capped, center = TRUE, scale = FALSE))
+data$cohesion_z <- as.numeric(scale(data$cohesion_capped, center = TRUE, scale = TRUE))
 data$susceptibility_c    <- as.numeric(scale(data$susceptibility, center = TRUE, scale = FALSE))
 
 # Descriptives

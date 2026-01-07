@@ -564,16 +564,16 @@ dev.off()
 
 
 m_cohesion_test_no_class <- glmmTMB(
-  choice ~ target * group * block + cohesion_capped_c + 
-           reward * effort + school +
+  choice ~ target * group * block + cohesion_z + 
+    reward * effort + school +
     (1 + block | ppn),
   data = df_long, 
   family = binomial
 )
 
 m_cohesion_test_with_class <- glmmTMB(
-  choice ~ target * group * block + cohesion_capped_c   + 
-           reward * effort + school +
+  choice ~ target * group * block + cohesion_z   + 
+    reward * effort + school +
     (1 + block | ppn) + (1 | class),
   data = df_long, 
   family = binomial
@@ -585,55 +585,54 @@ print(anova(m_cohesion_test_no_class, m_cohesion_test_with_class))
 # Model 3a: Base model with cohesion main effect
 
 m_cohesion_3a <- glmmTMB(
-  choice ~ target * group * block + cohesion_capped_c  
+  choice ~ target * group * block + cohesion_z  
   + reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+)
 
 # Model 3b: Add Group × Block × Cohesion
 
 m_cohesion_3b <- glmmTMB(
-    choice ~ target * group * block + 
-             group * block * cohesion_capped_c  + 
-             reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
+  choice ~ target * group * block + 
+    group * block * cohesion_z  + 
+    reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+)
 
 # Model 3c: Add three-way interactions with target
 
 m_cohesion_3c <- glmmTMB(
-    choice ~ (group * block * target) + 
-             (group * block * cohesion_capped_c ) +
-             (group * target * cohesion_capped_c ) + 
-             (block * target * cohesion_capped_c ) +
-             reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
+  choice ~ (group * block * target) + 
+    (group * block * cohesion_z ) +
+    (group * target * cohesion_z ) + 
+    (block * target * cohesion_z ) +
+    reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+)
 
 # Model 3d: Full four-way interaction
 
 m_cohesion_3d <- glmmTMB(
-    choice ~ group * block * target * cohesion_capped_c  + 
-             reward * effort + school +
-      (1 + block | ppn),
-    data = df_long, 
-    family = binomial
-  )
+  choice ~ group * block * target * cohesion_z  + 
+    reward * effort + school +
+    (1 + block | ppn),
+  data = df_long, 
+  family = binomial
+)
 
 
 print(anova(m_cohesion_3a, m_cohesion_3b, m_cohesion_3c, m_cohesion_3d))
 
-m_cohesion_final <- m_cohesion_3a
+m_cohesion_final <- m_cohesion_3d
 
 summary(m_cohesion_final)
 sjPlot::tab_model(m_cohesion_final)
-
 
 ```
 

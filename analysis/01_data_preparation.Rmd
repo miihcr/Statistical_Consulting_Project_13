@@ -98,7 +98,7 @@ df_long <- df_wide |>
     trial = trial_clean, block, target,
     reward, effort, choice,
     susceptibility, susceptibility_c,
-    cohesion_capped, cohesion_capped_c,
+    cohesion_capped, cohesion_capped_c, cohesion_z,
     avg_outdegree, avg_outdegree_c
   )
 
