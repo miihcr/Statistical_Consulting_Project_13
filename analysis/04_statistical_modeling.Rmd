@@ -11,7 +11,6 @@ source(here::here("scripts","_common.R"), local = knitr::knit_global())
 
 df_long <- readRDS(p_processed("df_long.rds"))
 
-
 ctrl <- lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
 
 ```
@@ -129,7 +128,15 @@ The 3-way interaction is not significant, but given that the research question r
 
 ```{r}
 
-final_model <- m_full
+final_model <- glmer(
+  choice ~ target * group * block + reward * effort + school +
+    (1 + block | ppn),  
+  data = df_long,
+  family = binomial,
+  control = ctrl
+)
+
+
 
 saveRDS(final_model, p_processed("models", "final_model_RQ1.rds")) # save model
 
@@ -186,7 +193,7 @@ saveRDS(or_table_display, p_processed("results", "or_table_RQ1.rds"))
 
 
 theme_set(theme_sjplot())
-sjPlot::plot_model(m_full,
+sjPlot::plot_model(final_model,
                    order.terms = c( 21, 22, 23, 24, # 3-way interactions 
                                     17, 18,           # Group × Block interactions 
                                     15, 16,           # Target × Block interactions 
@@ -425,58 +432,14 @@ summary(baseline_glmmTMB)
 ### Social Susceptibility Moderation (H4)
 
 ```{r}
-# Model 2a: Base model with susceptibility main effect only
-m_suscept_2a <- glmmTMB(
-  choice ~ target * group * block + susceptibility_c + 
-           reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
 
-# Model 2b: Add Group × Block × Susceptibility
-
-
-m_suscept_2b <- glmmTMB(
-  choice ~ target * group * block + 
-           group * block * susceptibility_c + 
-           reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-
-# Model 2c: Add three-way interactions with target
-
-
-m_suscept_2c <- glmmTMB(
-  choice ~ (group * block * target) + 
-           (group * block * susceptibility_c) +
-           (group * target * susceptibility_c) + 
-           (block * target * susceptibility_c) +
-           reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-  )
-  
-
-# Model 2d: Full four-way interaction
-
-m_suscept_2d <- glmmTMB(
+m_suscept_final <- glmmTMB(
   choice ~ group * block * target * susceptibility_c + 
            reward * effort + school +
-    (1 + block | ppn),
+    (1 + block | ppn),  # no class RE
   data = df_long, 
   family = binomial
 )
-  
-
-# Compare models
-print(anova(m_suscept_2a, m_suscept_2b, m_suscept_2c, m_suscept_2d))
-
-m_suscept_final <- m_suscept_2b
 
 saveRDS(m_suscept_final, p_processed("models", "m_suscept_final.rds"))
 
@@ -485,8 +448,6 @@ sjPlot::tab_model(m_suscept_final)
 
 
 ```
-
-Decision: Best fitting model is 2b.
 
 
 #### Model Diagnostics
@@ -563,73 +524,14 @@ dev.off()
 ```{r}
 
 
-m_cohesion_test_no_class <- glmmTMB(
-  choice ~ target * group * block + cohesion_z + 
-    reward * effort + school +
-    (1 + block | ppn),
+m_cohesion_final <- glmmTMB(
+  choice ~ group * block * target * cohesion_z + 
+           reward * effort + school +
+    (1 + block | ppn) + (1 | class),  # with class RE
   data = df_long, 
   family = binomial
 )
 
-m_cohesion_test_with_class <- glmmTMB(
-  choice ~ target * group * block + cohesion_z   + 
-    reward * effort + school +
-    (1 + block | ppn) + (1 | class),
-  data = df_long, 
-  family = binomial
-)
-
-print(anova(m_cohesion_test_no_class, m_cohesion_test_with_class))
-
-
-# Model 3a: Base model with cohesion main effect
-
-m_cohesion_3a <- glmmTMB(
-  choice ~ target * group * block + cohesion_z  
-  + reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-# Model 3b: Add Group × Block × Cohesion
-
-m_cohesion_3b <- glmmTMB(
-  choice ~ target * group * block + 
-    group * block * cohesion_z  + 
-    reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-# Model 3c: Add three-way interactions with target
-
-m_cohesion_3c <- glmmTMB(
-  choice ~ (group * block * target) + 
-    (group * block * cohesion_z ) +
-    (group * target * cohesion_z ) + 
-    (block * target * cohesion_z ) +
-    reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-# Model 3d: Full four-way interaction
-
-m_cohesion_3d <- glmmTMB(
-  choice ~ group * block * target * cohesion_z  + 
-    reward * effort + school +
-    (1 + block | ppn),
-  data = df_long, 
-  family = binomial
-)
-
-
-print(anova(m_cohesion_3a, m_cohesion_3b, m_cohesion_3c, m_cohesion_3d))
-
-m_cohesion_final <- m_cohesion_3d
 
 summary(m_cohesion_final)
 sjPlot::tab_model(m_cohesion_final)
@@ -706,8 +608,8 @@ theme_set(theme_sjplot())
 
 p_cohesion_final <- sjPlot::plot_model(
   m_cohesion_final,
-  type = "est",   # <- this is what removes stuff
-  sort.est = FALSE,              # <- respects your order above
+  type = "est",   
+  sort.est = FALSE,             
   show.intercept = FALSE,
   vline.color = "red"
 )
@@ -737,7 +639,7 @@ terms_suscept_keep <- c(
 )
 
 p_suscept_final <- sjPlot::plot_model(
-  m_suscept_2b,
+  m_suscept_final,
   type = "est",
   terms = terms_suscept_keep,
   sort.est = FALSE,
@@ -752,5 +654,4 @@ ggsave(p_fig("regression-plots", "m-suscept-final.png"),
 
 ```
 
-Decision: The best fitting model is m_cohesion_3a
 

@@ -29,19 +29,14 @@ df_wide <- df_wide |>
                     labels = c("1_loc1", "1_loc2", "2")),
     class = as.factor(class),
     group = factor(group, levels = c(1, 2, 3),
-                   labels = c("control", "positive_norm", "negative_norm"))
+                   labels = c("positive_norm", "negative_norm", "control"))
   ) |>  # we can also combine schools
   mutate(
     #
     school_combined = case_when(
       school %in% c("1_loc1", "1_loc2") ~ "School_1",
       school == "2" ~ "School_2"
-    )) |> 
-  mutate(
-     cohesion_capped = as.numeric(cohesion_capped),
-    cohesion_capped_c = as.numeric(scale(cohesion_capped, center = TRUE, scale = FALSE))
-  )
-
+    )) 
 
 # --- 5. Identify trial columns ---
 # Pattern matches trial names like: "1_SELF_2easy40" or "X2_CLIMATE_10hard90"
