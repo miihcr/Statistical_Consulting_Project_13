@@ -21,11 +21,13 @@ ctrl <- lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6))
 
 ## 1. Model Selection
 
-Do exposure to social norms about environmental behavior influence children’s effortful pro-environmental choices?
-
-### Step 1: Test whether classroom random intercept is needed
+### 1.1. Random Effects Structure
 
 ```{r}
+
+
+# ---- Step 1: Test whether classroom random intercept is needed ---- #
+
 
 # Baseline model (intercept only)
 
@@ -62,14 +64,7 @@ print(anova(m1_without_class, m1_with_class))
 
 print(VarCorr(m1_with_class))
 
-
-```
-
-Decision: Use model without class random intercept.
-
-### Step 2: Test whether random slopes for block is needed
-
-```{r}
+# ---- Step 2: Test whether random slopes for block is needed ---- #
 
 m_rslopes <- glmer(
   choice ~ target*group*block + reward*effort + school +
@@ -85,15 +80,21 @@ anova(m1_without_class, m_rslopes)
 
 print(VarCorr(m_rslopes))
 
+isSingular(m_rslopes)
+
 
 
 ```
 
-Decision: Adding random slopes for block significantly improves the model fit This indicates that participants differ substantially in how their choices evolve across blocks.
+Variance for class is estimated near-zero, resulting in singularity issues. LRT tests do not favor class random intercept. Therefore, model without class random intercept is retained.
 
-### Step 3: Test 3-way interaction (Target $\times$ Group $\times$ Block)
+Adding random slopes for block significantly improves the model fit. This indicates that participants differ substantially in how their choices evolve across blocks.
+
+### 1.2. Interaction effects
 
 ```{r}
+
+### Test 3-way interaction 
 
 # Full model with three-way interaction
 m_full <- glmer(
@@ -122,9 +123,11 @@ anova(m_no_3way, m_full)
 
 ```
 
-### Final Model Selection for RQ1
+The 3-way interaction is not significant. However, given our hypotheses, we do not remove any terms.
 
-The 3-way interaction is not significant, but given that the research question requires directly testing this hypothesis, we retain the full model.
+### 1.3. Final Model
+
+The final model is given below.
 
 ```{r}
 
@@ -136,9 +139,6 @@ final_model <- glmer(
   control = ctrl
 )
 
-
-
-saveRDS(final_model, p_processed("models", "final_model_RQ1.rds")) # save model
 
 
 # Check singularity
@@ -155,7 +155,7 @@ print(anova(m0, final_model))
 
 ```
 
-## 2. Model Summary and Effect Sizes
+## 2. Model Summary and Visualizations 
 
 ```{r}
 
@@ -189,151 +189,179 @@ or_table_display$p_value <- round(or_table_display$p_value, 4)
 
 print(or_table_display)
 
-saveRDS(or_table_display, p_processed("results", "or_table_RQ1.rds"))
-
 
 theme_set(theme_sjplot())
-sjPlot::plot_model(final_model,
-                   order.terms = c( 21, 22, 23, 24, # 3-way interactions 
-                                    17, 18,           # Group × Block interactions 
-                                    15, 16,           # Target × Block interactions 
-                                    11, 12, 13, 14,   # Target × Group interactions 
-                                    5,                # blockpost 
-                                    3, 4,             # group main effects 
-                                    1, 2,             # target main effects 
-                                    6, 7, 8,          # reward and effort main effects 
-                                    19, 20,           # reward × effort interactions 
-                                    9, 10             # school effects 
-                   ),            # school effects)
-                   vline.color = "red")
+ordered_terms <- c(
+  # CONTROL VARIABLES (bottom)
+  "school2",
+  "school1_loc2",
+  "effort90%",
+  "reward10 points",
+  "reward6 points",
+  "reward10 points:effort90%",
+  "reward6 points:effort90%",
+  
+  # MAIN EFFECTS
+  "targetprosocial",
+  "targetclimate",
+  "groupnegative_norm",
+  "grouppositive_norm",
+  "blockpost",
+  
+  # TWO-WAY INTERACTIONS 
+  "targetprosocial:groupnegative_norm",
+  "targetclimate:groupnegative_norm",
+  "targetprosocial:grouppositive_norm",
+  "targetclimate:grouppositive_norm",
+  "targetprosocial:blockpost",
+  "targetclimate:blockpost",
+  "groupnegative_norm:blockpost",
+  "grouppositive_norm:blockpost",
+  
+  # THREE-WAY INTERACTIONS (top)
+  "targetprosocial:groupnegative_norm:blockpost",
+  "targetprosocial:grouppositive_norm:blockpost",
+  "targetclimate:groupnegative_norm:blockpost",
+  "targetclimate:grouppositive_norm:blockpost"
+)
+
+# Create custom labels
+custom_labels <- c(
+  # Controls (bottom)
+  "School 2",
+  "School (Location 2)",
+  "Effort (90%)",
+  "Reward (10 pts)",
+  "Reward (6 pts)",
+  "Reward (10 pts) × Effort (90%)",
+  "Reward (6 pts) × Effort (90%)",
+  
+  # Main effects
+  "Target: Prosocial",
+  "Target: Climate",
+  "Negative norm",
+  "Positive norm",
+  "Block (Post)",
+  
+  # Two-way
+  "Negative × Prosocial",
+  "Negative × Climate",
+  "Positive × Prosocial",
+  "Positive × Climate",
+  "Post × Prosocial",
+  "Post × Climate",
+  "Negative × Post",
+  "Positive × Post",
+  
+  # Three-way (top)
+  "Negative × Post × Prosocial",
+  "Positive × Post × Prosocial",
+  "Negative × Post × Climate",
+  "Positive × Post × Climate"
+)
 
 
+forest_rq1 <- plot_model(final_model, 
+                     type = "est",
+                     show.intercept = FALSE,
+                     title = "Fixed Effects: Social Norm Manipulation (RQ1)",
+                     vline.color = "red",
+                     terms = ordered_terms,
+           axis.labels = custom_labels) +
+  theme_bw()
 
-ggsave(p_fig("regression-plots", "model-estimates.png"),
-       width = 7, height = 5, dpi = 300)
 
-
-
+ggsave(p_fig("regression-plots", "forest_rq1.png"),
+       plot = forest_rq1, width = 8, height = 10, dpi = 300)
 
 ```
 
-## 3. Model Performance Metrics
+
+### Visualizations
 
 ```{r}
 
-# ICC
-icc_val <- performance::icc(final_model)
-round(icc_val$ICC_adjusted, 3)
+pred_rq1 <- predict_response(final_model, terms = c("block", "group", "target"))
 
-# R-squared
-r2_vals <- performance::r2(final_model)
-round(r2_vals$R2_marginal, 3)
-round(r2_vals$R2_conditional, 3)
-
-```
-
-## 4. Post-hoc Analyses
-
-Only in the case of a significant interaction. This was not the case.
-
-
-```{r}
-
-# 4.1 Reward × Effort
-
-emm_re <- emmeans(final_model, ~ reward * effort, type = "response")
-contrast(emm_re, "pairwise", by = "reward", adjust = "holm")
-contrast(emm_re, "pairwise", by = "effort", adjust = "holm")
-
-
-gg_re <- ggpredict(final_model, terms = c("reward", "effort"))
-plot_re <- plot(gg_re) +
-  labs(
-    title = "Predicted Probability of High-Effort Choice",
-    y = "P(High-Effort Choice)",
-    x = "Reward (points)"
-  ) +
+plot_rq1 <- ggplot(pred_rq1, aes(x = x, y = predicted, colour = group, fill = group, group = group)) +
+  geom_hline(yintercept = 0.90, linetype = "dashed", color = "red", alpha = 0.5) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, colour = NA) +
+  geom_line(linewidth = 0.8) + 
+  facet_wrap(~facet, ncol = 3) +
+  coord_cartesian(ylim = c(0.85, 1.00)) +  
   theme_bw() +
-  scale_y_continuous(limits = c(0,1))
-
-
-# 4. 2. Target $\times$ Group interaction (Exploratory)
-
-# Estimated marginal means
-emm_tg <- emmeans(final_model, ~ target * group, type = "response")
-contrast(emm_tg, "pairwise", by = "group", adjust = "holm")
-contrast(emm_tg, "pairwise", by = "target", adjust = "holm")
-
-
-gg_tg <- ggpredict(final_model, terms = c("target", "group"))
-plot_tg <- plot(gg_tg) +
-  labs(
-    title = "Target × Group Interaction (Exploratory)",
-    subtitle = "Differential effects across targets, particularly for prosocial",
-    y = "Predicted P(High-Effort Choice)",
-    x = "Social Target",
-    color = "Group"
+  theme(
+    legend.position = "right",
+    strip.background = element_rect(fill = "white"),
+    panel.grid.minor = element_blank()  
   ) +
-  theme_bw() +
-  scale_y_continuous(limits = c(0,1))
-
-# 4.3 Block × Group × Target (Primary hypothesis display)
-
-
-emm_full <- emmeans(final_model, ~ target * group * block,
-                    type = "response")
- 
-prepost <- contrast(
-  emm_full,
-  method = "pairwise",
-  by = c("target", "group")
-)
-
-as.data.frame(prepost)
-
-# Difference-in-differences: Compare change scores across groups
-
-did <- contrast(
-  emm_full,
-  interaction = c("pairwise", "pairwise"),
-  by = "target",
-  adjust = "holm"
-)
-as.data.frame(did)
-
-# Visualization showing ceiling effect
-
-gg_3way <- ggpredict(final_model, terms = c("block", "group", "target"))
-
-plot_3way <- plot(gg_3way) +
   labs(
-    title = "Target × Group × Block: Primary Hypothesis Test",
-    subtitle = "No differential effects detected (ceiling effects prevent detection)",
+    title = "Target × Group × Block interaction", 
     y = "Predicted P(High-Effort Choice)",
     x = "Block",
-    color = "Group"
+    colour = "Group",
+    fill = "Group"  # Need this for the ribbon
+  ) + scale_colour_manual(
+    values = c("control" = "#999999",        # Gray
+               "positive_norm" = "#009E73",  # Green
+               "negative_norm" = "#E69F00"), # Orange
+    labels = c("control" = "Control",
+               "positive_norm" = "Positive norm",
+               "negative_norm" = "Negative norm")
   ) +
-  facet_wrap(~ facet, ncol = 3) +
-  theme_bw() +
-  scale_y_continuous(limits = c(0.85, 1.0)) +  # Show the ceiling
-  geom_hline(yintercept = 0.92, linetype = "dashed", color = "red", alpha = 0.5)
+  scale_fill_manual(
+    values = c("control" = "#999999",        # Gray
+               "positive_norm" = "#009E73",  # Green
+               "negative_norm" = "#E69F00"), # Orange
+    labels = c("control" = "Control",
+               "positive_norm" = "Positive norm",
+               "negative_norm" = "Negative norm")
+  )
 
-# save all
 
-ggsave(p_fig("regression-plots", "reward_effort_interaction.png"),
-       plot = plot_re, width = 7, height = 5, dpi = 300)
+plot_rq1
 
-ggsave(p_fig("regression-plots", "target_group_interaction.png"),
-       plot = plot_tg, width = 7, height = 5, dpi = 300)
+ggsave(p_fig("regression-plots", "plot_rq1.png"),
+       plot = plot_rq1, width = 7, height = 5, dpi = 300)
 
-ggsave(p_fig("regression-plots", "three_way_interaction_primary_hypothesis.png"),
-       plot = plot_3way, width = 7, height = 5, dpi = 300)
+```
+
+## 3. Planned Contrasts
+
+Because the hypothesis refers to difference-in-difference, we conduct planned contrasts.
+
+```{r}
+
+# Estimated marginal means
+emm_clim <- emmeans(
+  final_model,
+  ~ block | group,
+  at   = list(target = "climate"),
+  type = "response"
+)
+
+# Post - pre change per group
+delta_clim <- contrast(emm_clim, method = "revpairwise")
+confint(delta_clim)  
+
+# Compare changes between groups (planned contrasts)
+did_clim <- contrast(
+  delta_clim,
+  method = list(
+    "Positive vs Control"  = c(-1,  1,  0),  
+    "Negative vs Control"  = c(-1,  0,  1),  
+    "Positive vs Negative" = c( 0,  1, -1)
+  ),
+  by = "contrast",
+  adjust = "holm"
+)
+
+confint(did_clim)
 
 
 ```
 
-
-## 5. Final Model Diagnostics
+## 4. Model Diagnostics and Performance
 
 ```{r}
 
@@ -390,31 +418,34 @@ dpi <- 300
 
 # Plots 
 
-png(p_fig("diagnostics", "dharma_main.png"), width = w, height = h, units = "in", res = dpi)
+png(p_fig("diagnostics", "dharma_main.png"), width = w, height = h, 
+    units = "in", res = dpi)
 plot(sim)
 dev.off()
 
-png(p_fig("diagnostics", "dharma_random.png"), width = w, height = h, units = "in", res = dpi)
-plot(sim_ppn)
-dev.off()
 
-png(p_fig("diagnostics", "lattice_random.png"), width = w, height = h, units = "in", res = dpi)
-randoms1 <- ranef(final_model)
-lattice::qqmath(randoms1)
-dev.off()
+# Performance metrics 
+
+# ICC
+icc_val <- performance::icc(final_model)
+icc_val
+
+
+# R-squared
+r2_vals <- performance::r2(final_model)
+r2_vals
+
 
 
 ```
 
-## Research Question 2 (glmmTMB)
 
-Are these effects moderated by (a) individual social susceptibility and (b) classroom cohesion?
+## Research Question 2
 
-Note: the following analyses make use of \texttt{glmmTMB} due to the complexity of the models.
-
-We first verify if lme4 and glmmTMB produce equivalent results
+We extend the model from RQ1 and fit two moderation models. Note: glmmTMB is used given the increased model complexity.
 
 ```{r}
+
 # Fit baseline equivalent model in glmmTMB
 baseline_glmmTMB <- glmmTMB(
   choice ~ target * group * block + reward * effort + 
@@ -429,28 +460,67 @@ summary(baseline_glmmTMB)
 
 ```
 
-### Social Susceptibility Moderation (H4)
+## 1. Social Susceptibility Moderation (H4)
 
 ```{r}
 
 m_suscept_final <- glmmTMB(
   choice ~ group * block * target * susceptibility_c + 
            reward * effort + school +
-    (1 + block | ppn),  # no class RE
+    (1 + block | ppn),  
   data = df_long, 
   family = binomial
 )
 
-saveRDS(m_suscept_final, p_processed("models", "m_suscept_final.rds"))
 
 summary(m_suscept_final)
+
 sjPlot::tab_model(m_suscept_final)
 
 
 ```
 
+### 1.1. Planned Contrasts
 
-#### Model Diagnostics
+```{r}
+
+# pick susceptibility values (mean +- 1 SD)
+sus_mean <- mean(df_long$susceptibility_c, na.rm = TRUE)
+sus_sd   <- sd(df_long$susceptibility_c, na.rm = TRUE)
+sus_vals <- c(low = sus_mean - sus_sd,
+              mean = sus_mean,
+              high = sus_mean + sus_sd)
+
+# EMMs by block within each group x susceptibility (climate only)
+
+emm_sus <- emmeans(
+  m_suscept_final,
+  ~ block | group * susceptibility_c,
+  at = list(target = "climate",
+            susceptibility_c = sus_vals),
+  type = "response"
+)
+
+# post - pre within each group x susceptibility
+delta_sus <- contrast(emm_sus, method = "revpairwise")
+confint(delta_sus)
+
+# planned contrasts of the post-pre change, within each susceptibility level
+did_sus <- contrast(
+  delta_sus,
+  method = list(
+    "Positive vs Control"  = c(-1,  1,  0),
+    "Negative vs Control"  = c(-1,  0,  1),
+    "Positive vs Negative" = c( 0,  1, -1)
+  ),
+  by = c("susceptibility_c", "contrast"),
+  adjust = "holm"
+)
+
+confint(did_sus)
+```
+
+### 1.2. Diagnostics and Performance 
 
 ```{r}
 
@@ -495,11 +565,6 @@ plot(sim_ppn_sus)
 testDispersion(sim_ppn_sus)
 
 
-performance::icc(m_suscept_final)
-
-performance::r2(m_suscept_final)
-
-
 # Save diagnostic plots
 
 w <- 7
@@ -513,18 +578,100 @@ plot(sim_sus)
 dev.off()
 
 
+# Performance metrics
+
+performance::icc(m_suscept_final)
+
+performance::r2(m_suscept_final)
+
+
+
+```
+
+### 1.3. Model Coefficients Plot 
+
+```{r}
+ordered_terms_suscept <- c(
+
+  # SUSCEPTIBILITY MAIN EFFECT
+  "susceptibility_c",
+  
+  # TWO-WAY: Susceptibility interactions
+  "targetprosocial:susceptibility_c",
+  "targetclimate:susceptibility_c",
+  "blockpost:susceptibility_c",
+  "groupnegative_norm:susceptibility_c",
+  "grouppositive_norm:susceptibility_c",
+  
+  
+  # THREE-WAY: With susceptibility
+  "blockpost:targetprosocial:susceptibility_c",
+  "blockpost:targetclimate:susceptibility_c",
+  "groupnegative_norm:targetprosocial:susceptibility_c",
+  "grouppositive_norm:targetprosocial:susceptibility_c",
+  "groupnegative_norm:targetclimate:susceptibility_c",
+  "grouppositive_norm:targetclimate:susceptibility_c",
+  "groupnegative_norm:blockpost:susceptibility_c",
+  "grouppositive_norm:blockpost:susceptibility_c",
+  
+  # FOUR-WAY
+  "groupnegative_norm:blockpost:targetprosocial:susceptibility_c",
+  "grouppositive_norm:blockpost:targetprosocial:susceptibility_c",
+  "groupnegative_norm:blockpost:targetclimate:susceptibility_c",
+  "grouppositive_norm:blockpost:targetclimate:susceptibility_c"
+)
+
+# Custom labels - REVERSED order
+custom_labels_suscept <- c(
+  # Susceptibility main
+  "Susceptibility",
+  
+  # Two-way: Susceptibility
+  "Prosocial × Susceptibility",
+  "Climate × Susceptibility",
+  "Post × Susceptibility",
+  "Negative × Susceptibility",
+  "Positive × Susceptibility",
+  
+  # Three-way: With susceptibility
+  "Post × Prosocial × Susceptibility",
+  "Post × Climate × Susceptibility",
+  "Negative × Prosocial × Susceptibility",
+  "Positive × Prosocial × Susceptibility",
+  "Negative × Climate × Susceptibility",
+  "Positive × Climate × Susceptibility",
+  "Negative × Post × Susceptibility",
+  "Positive × Post × Susceptibility",
+  
+  # Four-way (H4) (top)
+  "Negative × Post × Prosocial × Susceptibility",
+  "Positive × Post × Prosocial × Susceptibility",
+  "Negative × Post × Climate × Susceptibility",
+  "Positive × Post × Climate × Susceptibility"
+)
+
+
+forest_suscept <- plot_model(m_suscept_final, 
+           type = "est",
+           show.intercept = FALSE,
+           title = "Fixed Effects: Susceptibility Moderation (H4)",
+           vline.color = "red",
+           terms = ordered_terms_suscept,
+           axis.labels = custom_labels_suscept) +
+  theme_bw()
+
+
+ggsave(p_fig("regression-plots", "forest_suscept.png"),
+       plot = forest_suscept, width = 8, height = 10, dpi = 300)
+
 ```
 
 
-### Classroom Cohesion Moderation (H5) 
-
-#### Capped Directed Density
-
+## 2. Classroom Cohesion Moderation (H5)
 
 ```{r}
 
-
-m_cohesion_final <- glmmTMB(
+m_cohesion_cre <- glmmTMB(
   choice ~ group * block * target * cohesion_z + 
            reward * effort + school +
     (1 + block | ppn) + (1 | class),  # with class RE
@@ -533,16 +680,63 @@ m_cohesion_final <- glmmTMB(
 )
 
 # Check classroom random effect variance
-VarCorr(m_cohesion_H5)
+VarCorr(m_cohesion_cre)
+
+performance::check_singularity(m_cohesion_cre) # singularity issues 
+
+
+m_cohesion_final <- glmmTMB(
+  choice ~ group * block * target * cohesion_z + 
+    reward * effort + school +
+    (1 + block | ppn),  
+  data = df_long, 
+  family = binomial
+)
+
 
 summary(m_cohesion_final)
+
 sjPlot::tab_model(m_cohesion_final)
-
-
 
 ```
 
-##### Model Diagnostics
+### 2.1. Planned Contrasts
+
+```{r}
+coh_vals <- c(low = -1, mean = 0, high = 1)
+
+emm_coh <- emmeans(
+  m_cohesion_final,
+  ~ block | group * cohesion_z,
+  at = list(
+    target = "climate",
+    cohesion_z = coh_vals
+  ),
+  type = "response"
+)
+
+
+delta_coh <- contrast(emm_coh, method = "revpairwise")
+confint(delta_coh)
+
+
+did_coh <- contrast(
+  delta_coh,
+  method = list(
+    "Positive vs Control"  = c(-1,  1,  0),
+    "Negative vs Control"  = c(-1,  0,  1),
+    "Positive vs Negative" = c( 0,  1, -1)
+  ),
+  by = c("cohesion_z", "contrast"),
+  adjust = "holm"
+)
+
+confint(did_coh)
+
+```
+
+
+### 2.2. Diagnostics and Performance 
 
 ```{r}
 
@@ -587,11 +781,6 @@ sim_ppn_coh <- recalculateResiduals(sim_coh, group = mf_coh$ppn)
 plot(sim_ppn_coh)
 testDispersion(sim_ppn_coh)
 
-
-performance::icc(m_cohesion_final)
-
-performance::r2(m_cohesion_final)
-
 # Save diagnostic plots
 
 w <- 7
@@ -604,58 +793,92 @@ png(p_fig("diagnostics", "dharma_coh.png"), width = w, height = h, units = "in",
 plot(sim_coh)
 dev.off()
 
+# Performance metrics
 
 
-# Model estimates plots 
+performance::icc(m_cohesion_final)
 
-theme_set(theme_sjplot())
-
-p_cohesion_final <- sjPlot::plot_model(
-  m_cohesion_final,
-  type = "est",   
-  sort.est = FALSE,             
-  show.intercept = FALSE,
-  vline.color = "red"
-)
-
-p_cohesion_final
-
-ggsave(p_fig("regression-plots", "m-cohesion-final.png"),
-       plot = p_cohesion_final, width = 7, height = 5, dpi = 300)
-
-theme_set(theme_sjplot())
-
-terms_suscept_keep <- c(
-  # 3-way interactions 
-  "grouppositive_norm:blockpost:susceptibility_c",
-  "groupnegative_norm:blockpost:susceptibility_c",
-  
-  # 2-way interactions 
-
-  "grouppositive_norm:susceptibility_c",
-  "groupnegative_norm:susceptibility_c",
-  "blockpost:susceptibility_c",
-  
-  # main effects 
-
-  "susceptibility_c"
-
-)
-
-p_suscept_final <- sjPlot::plot_model(
-  m_suscept_final,
-  type = "est",
-  terms = terms_suscept_keep,
-  sort.est = FALSE,
-  show.intercept = FALSE,
-  vline.color = "red"
-)
-
-ggsave(p_fig("regression-plots", "m-suscept-final.png"),
-       plot = p_suscept_final, width = 7, height = 5, dpi = 300)
-
-
+performance::r2(m_cohesion_final)
 
 ```
 
+### 2.3. Model Coefficients Plot
+
+```{r}
+# Cohesion model 
+ordered_terms_cohesion <- c(
+  
+  # COHESION MAIN EFFECT
+  "cohesion_z",
+  
+  # TWO-WAY: Cohesion interactions
+  "targetprosocial:cohesion_z",
+  "targetclimate:cohesion_z",
+  "blockpost:cohesion_z",
+  "groupnegative_norm:cohesion_z",
+  "grouppositive_norm:cohesion_z",
+  
+  # THREE-WAY: With cohesion
+  "blockpost:targetprosocial:cohesion_z",
+  "blockpost:targetclimate:cohesion_z",
+  "groupnegative_norm:targetprosocial:cohesion_z",
+  "grouppositive_norm:targetprosocial:cohesion_z",
+  "groupnegative_norm:targetclimate:cohesion_z",
+  "grouppositive_norm:targetclimate:cohesion_z",
+  "groupnegative_norm:blockpost:cohesion_z",
+  "grouppositive_norm:blockpost:cohesion_z",
+  
+  # FOUR-WAY
+  "groupnegative_norm:blockpost:targetprosocial:cohesion_z",
+  "grouppositive_norm:blockpost:targetprosocial:cohesion_z",
+  "groupnegative_norm:blockpost:targetclimate:cohesion_z",
+  "grouppositive_norm:blockpost:targetclimate:cohesion_z"
+)
+
+# Custom labels - REVERSED order
+custom_labels_cohesion <- c(
+  
+  # Cohesion main
+  "Cohesion",
+  
+  # Two-way: Cohesion
+  "Prosocial × Cohesion",
+  "Climate × Cohesion",
+  "Post × Cohesion",
+  "Negative × Cohesion",
+  "Positive × Cohesion",
+  
+  # Three-way: With cohesion
+  "Post × Prosocial × Cohesion",
+  "Post × Climate × Cohesion",
+  "Negative × Prosocial × Cohesion",
+  "Positive × Prosocial × Cohesion",
+  "Negative × Climate × Cohesion",
+  "Positive × Climate × Cohesion",
+  "Negative × Post × Cohesion",
+  "Positive × Post × Cohesion ",  
+  
+  # Four-way (H5) (top)
+  "Negative × Post × Prosocial × Cohesion",
+  "Positive × Post × Prosocial × Cohesion",
+  "Negative × Post × Climate × Cohesion",
+  "Positive × Post × Climate × Cohesion"
+)
+
+
+
+forest_cohesion <- plot_model(m_cohesion_final, 
+           type = "est",
+           show.intercept = FALSE,
+           title = "Fixed Effects: Susceptibility Moderation (H4)",
+           vline.color = "red",
+           terms = ordered_terms_cohesion,
+           axis.labels = custom_labels_cohesion) +
+  theme_bw()
+
+
+ggsave(p_fig("regression-plots", "forest_suscept.png"),
+       plot = forest_cohesion, width = 8, height = 10, dpi = 300)
+
+```
 
