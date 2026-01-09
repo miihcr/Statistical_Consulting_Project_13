@@ -153,6 +153,8 @@ print(VarCorr(final_model))
 print(anova(m0, final_model))
 
 
+
+
 ```
 
 ## 2. Model Summary and Visualizations 
@@ -356,6 +358,8 @@ did_clim <- contrast(
   adjust = "holm"
 )
 
+summary(did_clim)
+
 confint(did_clim)
 
 
@@ -477,6 +481,7 @@ summary(m_suscept_final)
 
 sjPlot::tab_model(m_suscept_final)
 
+drop1(m_suscept_final, test = "Chisq")
 
 ```
 
@@ -697,6 +702,10 @@ m_cohesion_final <- glmmTMB(
 summary(m_cohesion_final)
 
 sjPlot::tab_model(m_cohesion_final)
+
+drop1(m_cohesion_final, test = "Chisq")
+
+
 
 ```
 
