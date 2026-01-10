@@ -4,7 +4,7 @@
 
 This repository contains the analysis pipeline for Statistical Consulting Project 13 at Leiden University.
 
-All analyses are documented and executable via R Markdown (.Rmd) files in the `analysis/ folder`.
+All analyses are documented and executable via R Markdown (.Rmd) files in the `analysis/` folder.
 
 ---
 
