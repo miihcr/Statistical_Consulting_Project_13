@@ -4,6 +4,7 @@
 
 This repository contains the analysis pipeline for Statistical Consulting Project 13 at Leiden University.
 
+All analyses are documented and executable via R Markdown (.Rmd) files in the `analysis/ folder`.
 
 ---
 
@@ -14,175 +15,75 @@ This repository contains the analysis pipeline for Statistical Consulting Projec
 ```
 
 Statistical_Consulting_Project_13/
-
 │
-
 ├── data/
-
-│   ├── raw/               # Original provided datasets
-
-│   └── processed/         # Cleaned & transformed data saved as RDS
-
+│   ├── raw/                   # Original provided datasets (input)
+│   └── processed/             # Saved processed objects (RDS)
 │
-
 ├── figures/
-
-│   ├── descriptives/      # All descriptive plots
-
-│   ├── sem-plots/         # CFA visualisations
-
-│   ├── missingness/       # Missingness diagnostics
-
-│   ├── regression-plots/  # Model estimates & interactions
-
-│   └── diagnostics/       # DHARMa diagnostics
-
-│        
-
+│   ├── descriptives/          # Descriptive plots
+│   ├── sem-plots/             # CFA visualisations (semPlot)
+│   ├── missingness/           # Missingness diagnostics
+│   ├── regression-plots/      # Model estimates & interaction plots
+│   └── diagnostics/           # DHARMa diagnostics
+│
 ├── scripts/
-
-│   ├── 00_setup.R               # Pipeline — runs everything in sequence
-
-│   ├── _common.R                # Shared utilities, package loading, helpers
-
-│   ├── 01_compute_moderators.R  # SUS scores, CFA, networks, cohesion
-
-│   ├── 02_prepare_data.R        # Preprocessing, recoding, wide → long
-
-│   ├── 03_descriptives.R        # Descriptive stats + key plots
-
-│   ├── 04_missingness.R         # Missing data diagnostics
-
-│   └── 05_modeling.R            # Main GLMM models + moderation
-
-├── analysis/                    # contains the rmd files used for analysis with annotations 
-
-│   ├── 00_moderators 
-
-│   ├── 01_data_preparation              
-
-│   ├── 02_descriptives  
-
-│   ├── 03_missingness.R       
-
-│   ├── 04_statistical_modeling.R  
-
+│   └── _common.R              # Shared utilities, package loading, helper functions
+│
+├── analysis/                  # Rmd notebooks (main analysis, with annotations)
+│   ├── 00_moderators.Rmd
+│   ├── 01_data_preparation.Rmd
+│   ├── 02_descriptives.Rmd
+│   ├── 03_missingness_raw.Rmd
+│   └── 04_statistical_modeling.Rmd
+│
+├── .Rprofile                  # Project startup file (loads common utilities)
 └── README.md
 
-```
-
----
-
-
-##  How to Run the Full Pipeline
-
-
-
-### 1. Install required R packages
-
-All packages are loaded through `_common.R`.
-
-Missing packages will trigger an informative error message.
-
-```r
-
-source("scripts/_common.R")
 
 ```
 
 ---
 
 
-### 2. Run the entire analysis
-
-Run:
+##  How to Run the Analysis
 
 
-```r
-
-source("scripts/00_setup.R")
-
-```
-
-This will automatically perform:
+**Note:** All required R packages are loaded automatically via `scripts/_common.R`.  
+No manual setup is required; missing packages will trigger an informative error.
 
 
-* computation of social susceptibility & cohesion moderators
+### 1. Open the project in RStudio
 
-* data preparation (wide → long)
-
-* descriptive statistics and visualisation
-
-* missingness analysis
-
-* mixed-effects modelling and moderation
-
-* exporting all figures to the `figures/` directory
-
+Open the project folder as your working directory (project root).
 
 ---
 
-## Analysis Overview
 
-### 1. Moderators (`01_compute_moderators.R`)
+### 2. Run the notebooks 
 
-* Computes social susceptibility scales
+Run/knit the R Markdown files in this order:
 
-* Reliability (α, ω total)
+1. **`analysis/00_moderators.Rmd`**  
+   Computes social susceptibility measures, conducts CFA models, and derives classroom network cohesion metrics.
 
-* CFA (1-factor vs. 2-factor) + SEM path plots
+2. **`analysis/01_data_preparation.Rmd`**  
+   Prepares the analysis dataset, including factor recoding and wide-to-long reshaping.
 
-* Classroom social networks
+3. **`analysis/02_descriptives.Rmd`**  
+   Produces descriptive statistics and key figures.
 
-* Cohesion metrics (density, reciprocity, clustering, distances)
+4. **`analysis/03_missingness_raw.Rmd`**  
+   Performs missing-data exploration and generates diagnostic figures.
 
-* Saves processed moderator dataset
+5. **`analysis/04_statistical_modeling.Rmd`**  
+   Fits GLMMs and moderation models, producing model plots and diagnostics.
+   
+Outputs are written to:
 
-### 2. Data Preparation (`02_prepare_data.R`)
+`data/processed/` 
 
-* Factor recoding
-
-* Trial parsing from column names
-
-* Wide → long conversion
-
-* Outcome cleaning (binary effort choice)
-
-* Attaches moderators
-
-### 3. Descriptives (`03_descriptives.R`)
-
-* Summary statistics
-
-* Reward × Effort plot
-
-* Group × Target × Block plot
-
-* Ceiling effect analysis and plots
-* 
-
-### 4. Missingness (`04_missingness.R`)
-
-* Missing data maps
-
-* Variable-level \& case-level summaries
-
-* Boxplots to inspect MAR/MNAR patterns
-
-
-### 5. Modeling (`05_modeling.R`)
-
-* Mixed-effects logistic regression (GLMM)
-
-* Random-effect structure testing
-
-* Primary hypothesis testing
-
-* Post-hoc contrasts via EMMs
-
-* Moderation (susceptibility, cohesion)
-
-* Full DHARMa diagnostics
+`figures/` 
 
 ---
 
@@ -192,5 +93,10 @@ Milena Costa and Klāvs Kalvenieks
 
 ---
 
+## Citation and Use of This Work
 
+If you use, adapt, or build upon any part of this work, please cite:
 
+> Costa, M., & Kalvenieks, K. *Statistical Consulting Project 13*. Leiden University.
+
+This work is intended for academic and educational purposes.

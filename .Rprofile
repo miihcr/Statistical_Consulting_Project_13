@@ -1,10 +1,18 @@
-# Project startup file
+# .Rprofile — Project startup file
 
-common_path <- file.path(getwd(), "_common.R")
+common_path <- file.path(getwd(), "scripts", "_common.R")
 
 if (file.exists(common_path)) {
-  source(common_path)
-  message("✔ Packages and utilities loaded from _common.R")
+  tryCatch(
+    {
+      source(common_path)
+      message("✔ Packages and utilities loaded from scripts/_common.R")
+    },
+    error = function(e) {
+      message("⚠ Could not load scripts/_common.R: ", e$message)
+      message("   (Tip: install missing packages, then restart R)")
+    }
+  )
 } else {
-  warning("⚠ _common.R not found in project root")
+  message("⚠ scripts/_common.R not found. Are you in the project root?")
 }

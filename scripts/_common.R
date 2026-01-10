@@ -42,7 +42,6 @@ dir.create(p_fig(), recursive = TRUE, showWarnings = FALSE)
 dir.create(p_processed(), recursive = TRUE, showWarnings = FALSE)
 
 # folders for saved outputs
-dir.create(p_processed("models"), recursive = TRUE, showWarnings = FALSE)
 dir.create(p_processed("results"), recursive = TRUE, showWarnings = FALSE)
 
 # ---- Processed data loader ----
