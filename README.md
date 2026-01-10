@@ -6,6 +6,10 @@ This repository contains the analysis pipeline for Statistical Consulting Projec
 
 All analyses are documented and executable via R Markdown (.Rmd) files in the `analysis/` folder.
 
+Raw data are not included in this repository due to access restrictions.
+To run the analysis, users must manually place the raw data files in `data/raw/`, using the same file names as referenced in the analysis notebooks.
+
+
 ---
 
 
@@ -17,7 +21,7 @@ All analyses are documented and executable via R Markdown (.Rmd) files in the `a
 Statistical_Consulting_Project_13/
 │
 ├── data/
-│   ├── raw/                   # Original provided datasets (input)
+│   ├── raw/                   # Raw data (not included; add manually)
 │   └── processed/             # Saved processed objects (RDS)
 │
 ├── figures/
