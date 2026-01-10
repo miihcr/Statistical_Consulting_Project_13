@@ -57,9 +57,6 @@ No manual setup is required; missing packages will trigger an informative error.
 
 Open the project folder as your working directory (project root).
 
----
-
-
 ### 2. Run the notebooks 
 
 Run/knit the R Markdown files in this order:
