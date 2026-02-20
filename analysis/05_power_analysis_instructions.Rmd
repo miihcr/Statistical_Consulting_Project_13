@@ -1,0 +1,127 @@
+---
+title: "05_power_analysis"
+author: "Milena Costa"
+date: "2026-02-20"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+
+# eval = FALSE not to actually run the models given computational requirement 
+
+
+```
+
+# Power Analysis for Mixed Effects Models
+
+This document describes how to conduct a simulation-based power analysis for the GLMM models used in this project, using the \texttt{simr} package in R.
+
+The effects of interest are:
+
+RQ1: 3-way interaction target $\times$ group $\times$ block
+
+RQ2 (H4): 4-way interaction group $\times$ block $\times$ target $\times$ susceptibility_c
+
+RQ2 (H5): 4-way interaction group $\times$ block $\times$ target $\times$ cohesion_z
+
+## Requirements
+
+```{r}
+
+install.packages("simr")
+library(simr)
+
+```
+
+The models must already be fitted before running power simulations. See 04_statistical_modelling.Rmd for model specifications.
+
+## 1. Set the expected effect size
+
+If testing power with hypothetical effect size, override the relevant coefficient manually:
+
+```{r}
+# Example: set log-odds effect for the critical 4-way interaction
+# Small effect ~ 0.2, moderate ~ 0.3–0.5
+
+fixef(m_suscept_final)["grouppositive_norm:blockpost:targetclimate:susceptibility_c"] <- 0.3
+fixef(m_cohesion_final)["grouppositive_norm:blockpost:targetclimate:cohesion_z"] <- 0.3
+
+
+```
+
+## 2. Test power for the critical term
+
+Since the models are already fitted on the data, the coefficients are already estimated, and thus the above manual setup is not needed. You can run powerSim() directly:
+
+```{r}
+# RQ1: 3-way interaction
+powerSim(
+  final_model,
+  test = fixed("targetclimate:grouppositive_norm:blockpost"),
+  nsim = 500
+)
+
+# RQ2 H4: Susceptibility 4-way
+powerSim(
+  m_suscept_final,
+  test = fixed("grouppositive_norm:blockpost:targetclimate:susceptibility_c"),
+  nsim = 500
+)
+
+# RQ2 H5: Cohesion 4-way
+powerSim(
+  m_cohesion_final,
+  test = fixed("grouppositive_norm:blockpost:targetclimate:cohesion_z"),
+  nsim = 500
+)
+
+```
+
+## 3. Power curve across sample sizes
+
+You can simulate what would happen if you had more participants than you actually collected. You can then compute power at multiple sample sizes to see whether your actual N was sufficient, or identify the N where power reaches 80%.
+
+```{r}
+# Extend to maximum N you want to test
+model_ext <- extend(m_suscept_final, along = "ppn", n = 600)
+
+# Power curve
+pc <- powerCurve(
+  model_ext,
+  test = fixed("grouppositive_norm:blockpost:targetclimate:susceptibility_c"),
+  along = "ppn",
+  breaks = c(100, 200, 300, 400, 500, 600),
+  nsim = 500
+)
+
+# Plot and print results
+plot(pc)
+print(pc)
+
+```
+
+Repeat for other models as needed.
+
+### Interpreting results
+
+The output reports estimated power (%) with 95% confidence intervals at each sample size. If your actual N already exceeds 80% power, report that. If it doesn't, it should be acknowledged as a limitation.
+
+### Computation notes
+
+These simulations are computationally intensive. It is wise to start with nsim = 100 for a rough estimate, then increase to nsim=500 for the final reported analysis. Consider running overnight.
+
+Estimated runtimes:
+
+| nsim | Approximate runtime |
+|------|---------------------|
+| 100  | ~10–20 min          |
+| 200  | ~20–40 min          |
+| 500  | ~1–2 hours          |
+
+
+**References**
+
+Green, P., & MacLeod, C. J. (2016). SIMR: An R package for power analysis of generalised linear mixed models by simulation. Methods in Ecology and Evolution, 7, 493–498. <https://doi.org/10.1111/2041-210X.12504>
+
+Pargent, F., K. Koch, T., Kleine, A.-K., Lermer, E., & Gaube, S. (2024). A tutorial on tailored simulation-based sample-size planning for experimental designs with generalized linear mixed models. *Advances in Methods and Practices in Psychological Science*, 7(4). <https://doi.org/10.1177/25152459241287132>
