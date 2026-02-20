@@ -35,8 +35,10 @@ cache/
 *.docx
 *.pdf
 
-# Ignore all raw data (do not sync to GitHub)
-data/*
+# Ignore all data (do not sync to GitHub)
+data/**
+!data/raw/
+!data/raw/README.md
 
 # But keep a placeholder README 
 !data/raw/README.md
