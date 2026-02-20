@@ -41,6 +41,8 @@ Statistical_Consulting_Project_13/
 │   ├── 02_descriptives.Rmd
 │   ├── 03_missingness_raw.Rmd
 │   └── 04_statistical_modeling.Rmd
+│   └── 05_power_analysis_instructions.Rmd
+
 │
 ├── .Rprofile                  # Project startup file (loads common utilities)
 └── README.md
@@ -80,6 +82,9 @@ Run/knit the R Markdown files in this order:
 
 5. **`analysis/04_statistical_modeling.Rmd`**  
    Fits GLMMs and moderation models, producing model plots and diagnostics.
+
+6. **`analysis/05_power_analysis_instructions.Rmd`**  
+   Instructions on how to conduct a power analysis for GLMM models.
    
 Outputs are written to:
 
