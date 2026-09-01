@@ -104,4 +104,4 @@ Milena Costa and Klāvs Kalvenieks
 
 If you use, adapt, or build upon any part of this work, please cite:
 
-> Costa, M., & Kalvenieks, K. (2026). *Statistical Analysis Code for the Statistical Consulting Project* (Version 1.0.1) [Source code]. Zenodo.
+> Costa, M., & Kalvenieks, K. (2026). *Statistical Analysis Code for the Statistical Consulting Project* (Version 1.0.1) [Source code]. Zenodo. https://doi.org/10.5281/zenodo.22235682
