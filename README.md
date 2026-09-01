@@ -100,10 +100,8 @@ Milena Costa and Klāvs Kalvenieks
 
 ---
 
-## Citation and Use of This Work
+## Citation and Use 
 
 If you use, adapt, or build upon any part of this work, please cite:
 
-> Costa, M., & Kalvenieks, K. *Statistical Consulting Project 13*. Leiden University.
-
-This work is intended for academic and educational purposes.
+> Costa, M., & Kalvenieks, K. (2026). *Statistical Analysis Code for the Statistical Consulting Project* (Version 1.0.1) [Source code]. Zenodo.
